@@ -2,5 +2,5 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "latexresumeai",
   "compatibility_date": "2025-04-03",
-  "main": "./src/index.ts"
+  "main": "./index.tsx"
 }
