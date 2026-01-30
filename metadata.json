@@ -1,0 +1,5 @@
+{
+  "name": "LatexResumeAI",
+  "description": "Um construtor de currículos inteligente que gera código LaTeX personalizado com base no seu perfil e em uma descrição de vaga específica usando a API Gemini.",
+  "requestFramePermissions": []
+}
