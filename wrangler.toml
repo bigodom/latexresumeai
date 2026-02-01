@@ -1,5 +1,5 @@
 "$schema" = "./node_modules/wrangler/config-schema.json"
-name = "loyalty-lite"
+name = "latexresumeai"
 compatibility_date = "2025-04-03"
 
 [assets]
