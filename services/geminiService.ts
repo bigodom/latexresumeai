@@ -1,5 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
-const apiKey = process.env.VITE_API_KEY;
+
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_API_KEY: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+const apiKey = import.meta.env.VITE_API_KEY;
 
 const getClient = () => {
   if (!apiKey) {
