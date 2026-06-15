@@ -16,3 +16,9 @@ export interface PdfExtractResult {
   text: string;
   pageCount: number;
 }
+
+export enum LieLevel {
+  HONEST = 0,
+  ADAPTED = 1,
+  AUDACIOUS = 2,
+}
