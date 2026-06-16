@@ -45,8 +45,9 @@ const ResumeBuilder: React.FC = () => {
       const latex = await generateResumeLatex(profileText, jobDescription, lieLevel);
       setGeneratedLatex(latex);
       setStatus(GenerationStatus.SUCCESS);
-    } catch {
-      setErrorMsg('Ocorreu um erro ao gerar o currículo. Verifique sua chave de API ou tente novamente.');
+    } catch (err: any) {
+      // Mostra a mensagem de erro real retornada pela API/serviço, em vez de um texto genérico
+      setErrorMsg(err?.message || 'Ocorreu um erro ao gerar o currículo. Verifique sua chave de API ou tente novamente.');
       setStatus(GenerationStatus.ERROR);
     }
   };
@@ -175,8 +176,9 @@ const ResumeBuilder: React.FC = () => {
             {/* Ação */}
             <div className="pt-2 flex flex-col items-center space-y-4">
               {errorMsg && (
-                <div className="w-full p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-center">
-                  {errorMsg}
+                <div className="w-full p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  <p className="font-semibold text-red-300 mb-0.5">Erro ao gerar o currículo</p>
+                  <p className="text-red-200/90 break-words">{errorMsg}</p>
                 </div>
               )}
 
