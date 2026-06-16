@@ -13,7 +13,11 @@ declare global {
 const apiKey = import.meta.env.VITE_API_KEY;
 
 const getClient = () => {
-  if (!apiKey) throw new Error("VITE_API_KEY não encontrada.");
+  if (!apiKey) {
+    throw new Error(
+      "VITE_API_KEY não encontrada. Configure sua chave de API no arquivo .env.local."
+    );
+  }
   return new GoogleGenAI({ apiKey });
 };
 
@@ -128,11 +132,30 @@ export const generateResumeLatex = async (
   const ai = getClient();
   const prompt = getPrompt(profileText, jobDescription, lieLevel);
 
+  const startTime = performance.now();
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: prompt,
     });
+
+    const elapsedMs = performance.now() - startTime;
+    const elapsedSec = (elapsedMs / 1000).toFixed(2);
+
+    // Log de tempo e consumo de tokens da requisição
+    const usage = (response as any).usageMetadata;
+    if (usage) {
+      console.log(
+        `[Gemini] ⏱ ${elapsedSec}s | Tokens → prompt: ${usage.promptTokenCount ?? "?"}` +
+          ` | resposta: ${usage.candidatesTokenCount ?? "?"}` +
+          ` | total: ${usage.totalTokenCount ?? "?"}`
+      );
+    } else {
+      console.log(
+        `[Gemini] ⏱ ${elapsedSec}s | Informações de uso de tokens não disponíveis na resposta.`
+      );
+    }
 
     let latexCode = response.text ?? "";
 
@@ -143,9 +166,21 @@ export const generateResumeLatex = async (
       .replace(/\s*```$/i, "")
       .trim();
 
+    if (!latexCode) {
+      throw new Error("O modelo retornou uma resposta vazia. Tente novamente.");
+    }
+
     return latexCode;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Falha ao gerar o currículo. Tente novamente.");
+  } catch (error: any) {
+    const elapsedMs = performance.now() - startTime;
+    console.error(`[Gemini] ❌ Erro após ${(elapsedMs / 1000).toFixed(2)}s:`, error);
+
+    // Extrai a mensagem mais específica disponível para mostrar ao usuário
+    const apiMessage =
+      error?.message ||
+      error?.error?.message ||
+      error?.response?.data?.error?.message;
+
+    throw new Error(apiMessage || "Falha ao gerar o currículo. Tente novamente.");
   }
 };

@@ -1,10 +1,35 @@
 import React, { useState } from 'react';
-import { Copy, Check, Download } from 'lucide-react';
+import { Copy, Check, Download, ExternalLink } from 'lucide-react';
 import { Button } from './Button';
 
 interface LatexPreviewProps {
   code: string;
 }
+
+// Abre o código LaTeX direto em um novo projeto no Overleaf, sem precisar
+// hospedar o arquivo em nenhum lugar — usa o endpoint de "snip" do Overleaf.
+const openInOverleaf = (code: string) => {
+  const form = document.createElement('form');
+  form.action = 'https://www.overleaf.com/docs';
+  form.method = 'POST';
+  form.target = '_blank';
+
+  const snipInput = document.createElement('input');
+  snipInput.type = 'hidden';
+  snipInput.name = 'snip';
+  snipInput.value = code;
+  form.appendChild(snipInput);
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'hidden';
+  nameInput.name = 'snip_name';
+  nameInput.value = 'main.tex';
+  form.appendChild(nameInput);
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+};
 
 export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
   const [copied, setCopied] = useState(false);
@@ -29,14 +54,23 @@ export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
 
   return (
     <div className="flex flex-col h-full animate-fadeIn">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <h2 className="text-xl font-bold text-white flex items-center">
           <span className="bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent">
             LaTeX Gerado
           </span>
         </h2>
         <div className="flex space-x-2">
-           <Button variant="outline" onClick={handleDownload} icon={<Download size={16} />} title="Baixar arquivo .tex">
+          <Button
+            variant="primary"
+            onClick={() => openInOverleaf(code)}
+            icon={<ExternalLink size={16} />}
+            title="Abrir este código direto em um novo projeto no Overleaf"
+            className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 focus:ring-emerald-500"
+          >
+            Abrir no Overleaf
+          </Button>
+          <Button variant="outline" onClick={handleDownload} icon={<Download size={16} />} title="Baixar arquivo .tex">
             Baixar
           </Button>
           <Button variant={copied ? "primary" : "secondary"} onClick={handleCopy} icon={copied ? <Check size={16} /> : <Copy size={16} />}>
@@ -62,7 +96,7 @@ export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
         </div>
       </div>
       <p className="mt-4 text-slate-400 text-sm text-center">
-        Copie este código e cole no Overleaf ou editor LaTeX local para compilar o PDF.
+        Abra direto no Overleaf para compilar, ou copie/baixe o código para usar em outro editor LaTeX.
       </p>
     </div>
   );
