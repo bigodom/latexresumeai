@@ -13,7 +13,10 @@ import { InputArea } from './components/InputArea';
 import { LatexPreview } from './components/LatexPreview';
 import { Button } from './components/Button';
 import { LieLevelSelector } from './components/LieLevelSelector';
-import { generateResumeLatex } from './services/geminiService';
+import {
+  generateResumeLatex,
+  GeminiModelAttempt,
+} from './services/geminiService';
 import { GenerationStatus, LieLevel } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthPage } from './components/AuthPage';
@@ -27,6 +30,7 @@ const ResumeBuilder: React.FC = () => {
   const [generatedLatex, setGeneratedLatex] = useState('');
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [modelAttempt, setModelAttempt] = useState<GeminiModelAttempt | null>(null);
 
   const isGenerating =
     status === GenerationStatus.GENERATING || status === GenerationStatus.READING_PDF;
@@ -40,9 +44,15 @@ const ResumeBuilder: React.FC = () => {
     setStatus(GenerationStatus.GENERATING);
     setErrorMsg(null);
     setGeneratedLatex('');
+    setModelAttempt(null);
 
     try {
-      const latex = await generateResumeLatex(profileText, jobDescription, lieLevel);
+      const latex = await generateResumeLatex(
+        profileText,
+        jobDescription,
+        lieLevel,
+        setModelAttempt
+      );
       setGeneratedLatex(latex);
       setStatus(GenerationStatus.SUCCESS);
     } catch (err: any) {
@@ -154,7 +164,10 @@ const ResumeBuilder: React.FC = () => {
               value={profileText}
               onChange={setProfileText}
               allowFileUpload
-              onFileProcessingStart={() => setStatus(GenerationStatus.READING_PDF)}
+              onFileProcessingStart={() => {
+                setModelAttempt(null);
+                setStatus(GenerationStatus.READING_PDF);
+              }}
               onFileProcessingEnd={() => setStatus(GenerationStatus.IDLE)}
             />
 
@@ -224,6 +237,19 @@ const ResumeBuilder: React.FC = () => {
                       ? 'Extraindo texto do seu PDF...'
                       : 'Analisando requisitos e escrevendo LaTeX...'}
                   </p>
+                  {status === GenerationStatus.GENERATING && modelAttempt && (
+                    <div className="pt-2" aria-live="polite">
+                      <p className="text-xs uppercase tracking-wider text-slate-500">
+                        Modelo em uso
+                      </p>
+                      <p className="mt-1 font-mono text-sm text-indigo-300">
+                        {modelAttempt.model}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Tentativa {modelAttempt.attempt} de {modelAttempt.total}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

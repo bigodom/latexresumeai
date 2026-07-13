@@ -12,6 +12,20 @@ declare global {
 
 const apiKey = import.meta.env.VITE_API_KEY;
 
+export const GEMINI_MODEL_FALLBACKS = [
+  "gemini-3.5-flash",
+  "gemini-2.5-pro",
+  "gemini-3.1-flash-lite",
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash-lite",
+] as const;
+
+export interface GeminiModelAttempt {
+  model: (typeof GEMINI_MODEL_FALLBACKS)[number];
+  attempt: number;
+  total: number;
+}
+
 const getClient = () => {
   if (!apiKey) {
     throw new Error(
@@ -127,60 +141,70 @@ ${SHARED_LATEX_RULES}
 export const generateResumeLatex = async (
   profileText: string,
   jobDescription: string,
-  lieLevel: LieLevel = LieLevel.HONEST
+  lieLevel: LieLevel = LieLevel.HONEST,
+  onModelAttempt?: (attempt: GeminiModelAttempt) => void
 ): Promise<string> => {
   const ai = getClient();
   const prompt = getPrompt(profileText, jobDescription, lieLevel);
+  const failures: string[] = [];
 
-  const startTime = performance.now();
+  for (const [index, model] of GEMINI_MODEL_FALLBACKS.entries()) {
+    const attempt = index + 1;
+    const startTime = performance.now();
+    onModelAttempt?.({ model, attempt, total: GEMINI_MODEL_FALLBACKS.length });
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-    });
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
 
-    const elapsedMs = performance.now() - startTime;
-    const elapsedSec = (elapsedMs / 1000).toFixed(2);
+      const elapsedMs = performance.now() - startTime;
+      const elapsedSec = (elapsedMs / 1000).toFixed(2);
 
-    // Log de tempo e consumo de tokens da requisição
-    const usage = (response as any).usageMetadata;
-    if (usage) {
-      console.log(
-        `[Gemini] ⏱ ${elapsedSec}s | Tokens → prompt: ${usage.promptTokenCount ?? "?"}` +
-          ` | resposta: ${usage.candidatesTokenCount ?? "?"}` +
-          ` | total: ${usage.totalTokenCount ?? "?"}`
-      );
-    } else {
-      console.log(
-        `[Gemini] ⏱ ${elapsedSec}s | Informações de uso de tokens não disponíveis na resposta.`
+      // Log de tempo e consumo de tokens da requisição
+      const usage = (response as any).usageMetadata;
+      if (usage) {
+        console.log(
+          `[Gemini:${model}] ⏱ ${elapsedSec}s | Tokens → prompt: ${usage.promptTokenCount ?? "?"}` +
+            ` | resposta: ${usage.candidatesTokenCount ?? "?"}` +
+            ` | total: ${usage.totalTokenCount ?? "?"}`
+        );
+      } else {
+        console.log(
+          `[Gemini:${model}] ⏱ ${elapsedSec}s | Informações de uso de tokens não disponíveis na resposta.`
+        );
+      }
+
+      let latexCode = response.text ?? "";
+
+      // Remove fences de markdown caso o modelo adicione mesmo sendo instruído a não fazer
+      latexCode = latexCode
+        .replace(/^```latex\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
+      if (!latexCode) {
+        throw new Error("O modelo retornou uma resposta vazia.");
+      }
+
+      return latexCode;
+    } catch (error: any) {
+      const elapsedMs = performance.now() - startTime;
+      const apiMessage =
+        error?.message ||
+        error?.error?.message ||
+        error?.response?.data?.error?.message ||
+        "Erro desconhecido";
+
+      failures.push(`${model}: ${apiMessage}`);
+      console.error(
+        `[Gemini:${model}] ❌ Erro após ${(elapsedMs / 1000).toFixed(2)}s:`,
+        error
       );
     }
-
-    let latexCode = response.text ?? "";
-
-    // Remove fences de markdown caso o modelo adicione mesmo sendo instruído a não fazer
-    latexCode = latexCode
-      .replace(/^```latex\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-
-    if (!latexCode) {
-      throw new Error("O modelo retornou uma resposta vazia. Tente novamente.");
-    }
-
-    return latexCode;
-  } catch (error: any) {
-    const elapsedMs = performance.now() - startTime;
-    console.error(`[Gemini] ❌ Erro após ${(elapsedMs / 1000).toFixed(2)}s:`, error);
-
-    // Extrai a mensagem mais específica disponível para mostrar ao usuário
-    const apiMessage =
-      error?.message ||
-      error?.error?.message ||
-      error?.response?.data?.error?.message;
-
-    throw new Error(apiMessage || "Falha ao gerar o currículo. Tente novamente.");
   }
+
+  throw new Error(`Todos os modelos falharam. ${failures.join(" | ")}`);
 };
