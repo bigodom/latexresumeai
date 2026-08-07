@@ -9,6 +9,11 @@ interface LatexPreviewProps {
 // Abre o código LaTeX direto em um novo projeto no Overleaf, sem precisar
 // hospedar o arquivo em nenhum lugar — usa o endpoint de "snip" do Overleaf.
 const openInOverleaf = (code: string) => {
+  const confirmed = window.confirm(
+    'Ao continuar, o conteúdo do currículo será enviado ao Overleaf, um serviço externo. Deseja prosseguir?'
+  );
+  if (!confirmed) return;
+
   const form = document.createElement('form');
   form.action = 'https://www.overleaf.com/docs';
   form.method = 'POST';
@@ -34,20 +39,26 @@ const openInOverleaf = (code: string) => {
 export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.alert('Não foi possível copiar automaticamente. Selecione o código e copie manualmente.');
+    }
   };
 
   const handleDownload = () => {
     const element = document.createElement("a");
     const file = new Blob([code], {type: 'text/plain'});
-    element.href = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    element.href = objectUrl;
     element.download = "resume.tex";
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    URL.revokeObjectURL(objectUrl);
   };
 
   if (!code) return null;

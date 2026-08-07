@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
-import { extractTextFromPdf } from '../services/pdfService';
+import { extractTextFromPdf, MAX_PDF_SIZE_BYTES } from '../services/pdfService';
 
 interface InputAreaProps {
   label: string;
@@ -31,8 +31,13 @@ export const InputArea: React.FC<InputAreaProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
+    if (file.type && file.type !== 'application/pdf') {
       setError("Por favor, envie um arquivo PDF.");
+      return;
+    }
+
+    if (file.size > MAX_PDF_SIZE_BYTES) {
+      setError('O PDF deve ter no máximo 5 MB.');
       return;
     }
 
@@ -44,7 +49,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       onChange(result.text);
     } catch (err) {
       console.error(err);
-      setError("Falha ao ler PDF. Tente copiar o texto manualmente.");
+      setError(err instanceof Error ? err.message : 'Falha ao ler PDF. Tente copiar o texto manualmente.');
       setFileName(null);
     } finally {
       onFileProcessingEnd?.();

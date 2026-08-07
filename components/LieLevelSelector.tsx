@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Shuffle, Flame } from 'lucide-react';
-import { LieLevel } from '../types';
+import { ShieldCheck, Shuffle, ListChecks } from 'lucide-react';
+import { AdaptationMode } from '../types';
 
 interface LevelConfig {
-  level: LieLevel;
+  level: AdaptationMode;
   label: string;
   sublabel: string;
   description: string;
@@ -20,56 +20,56 @@ interface LevelConfig {
 
 const LEVELS: LevelConfig[] = [
   {
-    level: LieLevel.HONEST,
-    label: 'Honesto',
-    sublabel: '100% real',
+    level: AdaptationMode.FAITHFUL,
+    label: 'Fiel',
+    sublabel: 'Somente fatos',
     description:
-      'Reescreve seu currículo com as palavras-chave exatas da vaga sem inventar nada. Máxima pontuação ATS com suas informações reais.',
+      'Organiza e reescreve apenas as informações fornecidas, priorizando o que é relevante para a vaga.',
     icon: <ShieldCheck size={20} strokeWidth={1.8} />,
     selectedBg: 'bg-emerald-900/25',
     selectedBorder: 'border-emerald-500/60',
     selectedText: 'text-emerald-400',
     selectedDot: 'bg-emerald-400',
-    riskLabel: 'Sem risco',
+    riskLabel: 'Sem inferências',
     riskClass: 'text-emerald-400 bg-emerald-900/30 border-emerald-500/30',
   },
   {
-    level: LieLevel.ADAPTED,
-    label: 'Adaptado',
-    sublabel: 'Transferência de skills',
+    level: AdaptationMode.STRATEGIC,
+    label: 'Estratégico',
+    sublabel: 'Competências reais',
     description:
-      'Faz ponte inteligente entre suas habilidades e a vaga. Ex: Java API → apresentado como dev de APIs RESTful cobrindo Node.js.',
+      'Destaca competências reais e transferíveis com linguagem alinhada à vaga, sem adicionar qualificações.',
     icon: <Shuffle size={20} strokeWidth={1.8} />,
     selectedBg: 'bg-amber-900/25',
     selectedBorder: 'border-amber-500/60',
     selectedText: 'text-amber-400',
     selectedDot: 'bg-amber-400',
-    riskLabel: 'Baixo risco',
+    riskLabel: 'Ênfase estratégica',
     riskClass: 'text-amber-400 bg-amber-900/30 border-amber-500/30',
   },
   {
-    level: LieLevel.AUDACIOUS,
-    label: 'Audacioso',
-    sublabel: 'Adapta 100% à vaga',
+    level: AdaptationMode.GAP_ANALYSIS,
+    label: 'Análise de lacunas',
+    sublabel: 'Identifica o que falta',
     description:
-      'Alinha completamente o currículo à vaga, adicionando skills e experiências exigidas. Máxima compatibilidade ATS.',
-    icon: <Flame size={20} strokeWidth={1.8} />,
+      'Adapta apenas os fatos confirmados e registra requisitos ausentes para orientar seus próximos passos.',
+    icon: <ListChecks size={20} strokeWidth={1.8} />,
     selectedBg: 'bg-rose-900/25',
     selectedBorder: 'border-rose-500/60',
     selectedText: 'text-rose-400',
     selectedDot: 'bg-rose-400',
-    riskLabel: 'Alto risco',
+    riskLabel: 'Sem inventar fatos',
     riskClass: 'text-rose-400 bg-rose-900/30 border-rose-500/30',
   },
 ];
 
-interface LieLevelSelectorProps {
-  value: LieLevel;
-  onChange: (level: LieLevel) => void;
+interface AdaptationModeSelectorProps {
+  value: AdaptationMode;
+  onChange: (level: AdaptationMode) => void;
   disabled?: boolean;
 }
 
-export const LieLevelSelector: React.FC<LieLevelSelectorProps> = ({
+export const AdaptationModeSelector: React.FC<AdaptationModeSelectorProps> = ({
   value,
   onChange,
   disabled = false,

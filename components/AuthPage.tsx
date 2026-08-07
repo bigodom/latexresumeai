@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowRight, User, Mail, Lock, Loader2, ArrowLeft, Beaker } from 'lucide-react';
+import { FileText, ArrowRight, User, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
 
 interface AuthPageProps {
@@ -8,10 +8,11 @@ interface AuthPageProps {
 }
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
-  const { login, register, loginAsTestUser } = useAuth();
+  const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -27,10 +28,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       if (isLogin) {
         await login(email, password);
       } else {
-        await register(name, email, password);
+        const result = await register(name, email, password);
+        if (result.requiresEmailConfirmation) {
+          setNotice('Conta criada. Confira seu e-mail para confirmar o cadastro antes de entrar.');
+          setIsLogin(true);
+        }
       }
     } catch (err) {
-      setError("Ocorreu um erro. Tente novamente.");
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -68,6 +73,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl opacity-10 group-hover:opacity-20 transition duration-500 blur"></div>
           
           <form className="relative space-y-6" onSubmit={handleSubmit}>
+            {notice && (
+              <div className="text-emerald-300 text-sm text-center bg-emerald-900/20 py-2 rounded-lg border border-emerald-500/20">
+                {notice}
+              </div>
+            )}
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
@@ -113,12 +123,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-200 placeholder-slate-500 sm:text-sm transition-all"
                   placeholder="••••••••"
                 />
               </div>
+              {!isLogin && <p className="mt-1 text-xs text-slate-500">Use pelo menos 6 caracteres.</p>}
             </div>
 
             {error && (
@@ -145,24 +157,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 onClick={() => {
                     setIsLogin(!isLogin);
                     setError(null);
+                    setNotice(null);
                 }}
                 className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none focus:underline"
               >
                 {isLogin ? 'Cadastre-se' : 'Faça login'}
               </button>
             </p>
-          </div>
-
-          {/* Botão de Teste */}
-          <div className="mt-8 pt-6 border-t border-slate-800 relative z-10">
-             <Button
-                onClick={loginAsTestUser}
-                variant="secondary"
-                className="w-full text-sm bg-emerald-900/30 text-emerald-400 hover:bg-emerald-900/50 hover:text-emerald-300 border border-emerald-500/30 transition-all"
-                icon={<Beaker size={16} />}
-              >
-                Modo Teste (Entrar com 1000 Créditos)
-              </Button>
           </div>
 
         </div>

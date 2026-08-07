@@ -1,210 +1,97 @@
-import { GoogleGenAI } from "@google/genai";
-import { LieLevel } from "../types";
+import { AdaptationMode, ResumeVersion } from '../types';
+import { supabase } from './supabaseClient';
 
-declare global {
-  interface ImportMetaEnv {
-    readonly VITE_API_KEY: string;
-  }
-  interface ImportMeta {
-    readonly env: ImportMetaEnv;
-  }
+interface GenerateResumeResponse {
+  generationId?: string;
+  generation_id?: string;
+  remainingCredits?: number;
+  remaining_credits?: number;
+  resumeVersion?: Record<string, unknown>;
+  resume_version?: Record<string, unknown>;
 }
 
-const apiKey = import.meta.env.VITE_API_KEY;
-
-export const GEMINI_MODEL_FALLBACKS = [
-  "gemini-3.5-flash",
-  "gemini-2.5-pro",
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash-lite",
-] as const;
-
-export interface GeminiModelAttempt {
-  model: (typeof GEMINI_MODEL_FALLBACKS)[number];
-  attempt: number;
-  total: number;
+export interface GenerateResumeResult {
+  generationId: string;
+  resumeVersion: ResumeVersion;
+  remainingCredits: number;
 }
 
-const getClient = () => {
-  if (!apiKey) {
-    throw new Error(
-      "VITE_API_KEY não encontrada. Configure sua chave de API no arquivo .env.local."
-    );
+const normalizeResumeVersion = (raw: Record<string, unknown>): ResumeVersion => {
+  const latex = raw.latex;
+  if (typeof latex !== 'string' || !latex.trim()) {
+    throw new Error('O backend concluiu a geração, mas não retornou um documento LaTeX válido.');
   }
-  return new GoogleGenAI({ apiKey });
+
+  return {
+    id: String(raw.id ?? ''),
+    latex,
+    generatedContent: raw.generatedContent ?? raw.generated_content,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? new Date().toISOString()),
+    jobTitle: (raw.jobTitle ?? raw.job_title ?? null) as string | null,
+    company: (raw.company ?? null) as string | null,
+    adaptationMode: (raw.adaptationMode ?? raw.adaptation_mode) as AdaptationMode | undefined,
+  };
 };
-
-// ─── PROMPTS ─────────────────────────────────────────────────────────────────
-
-const SHARED_LATEX_RULES = `
-REGRAS OBRIGATÓRIAS DE LATEX:
-- Use \\documentclass{article} com os pacotes: geometry, titlesec, enumitem, hyperref, fontenc (T1), inputenc (utf8).
-- Layout clean e profissional: margens de 1.5cm nos lados, 1.8cm em cima e baixo.
-- Escape TODOS os caracteres especiais do LaTeX no conteúdo textual:
-    & → \\&    % → \\%    $ → \\$    # → \\#    _ → \\_
-    { → \\{    } → \\}    ~ → \\textasciitilde{}    ^ → \\textasciicircum{}
-- Seções: Cabeçalho, Resumo Profissional, Experiência, Habilidades, Formação.
-- Use bullet points com \\item e ambientes itemize/enumerate do pacote enumitem.
-- SAÍDA: apenas código LaTeX bruto. Sem blocos markdown. Comece com \\documentclass.
-`;
-
-const getPrompt = (
-  profileText: string,
-  jobDescription: string,
-  lieLevel: LieLevel
-): string => {
-  const context = `
-PERFIL DO CANDIDATO:
-${profileText}
-
-DESCRIÇÃO DA VAGA ALVO:
-${jobDescription}
-`;
-
-  switch (lieLevel) {
-    // ── NÍVEL 0: HONESTO ──────────────────────────────────────────────────────
-    case LieLevel.HONEST:
-      return `
-Você é um especialista em currículos e otimização para sistemas ATS (Applicant Tracking Systems).
-
-MISSÃO: Gerar um currículo LaTeX completo e compilável que maximize a pontuação em algoritmos ATS usando EXCLUSIVAMENTE as informações reais do candidato.
-
-${context}
-
-REGRAS DE CONTEÚDO — NÍVEL HONESTO:
-1. Use SOMENTE o que está descrito no Perfil do Candidato. Não invente nada.
-2. Reescreva as experiências e habilidades existentes incorporando as palavras-chave exatas da vaga de forma natural e honesta.
-3. Reorganize as seções priorizando o que é mais relevante para esta vaga específica.
-4. Quantifique conquistas já existentes no perfil quando possível (ex: "reduziu tempo de entrega" → "reduziu tempo de entrega em X%", mas só se o dado existir).
-5. Se o candidato não tem uma habilidade exigida, NÃO a adicione. Enfatize habilidades transferíveis que ele realmente possui.
-6. Resumo profissional: 3 linhas, direto, com as 2–3 palavras-chave mais críticas da vaga.
-7. Idioma: detecte o idioma dominante do perfil/vaga e escreva o currículo inteiro nele.
-
-${SHARED_LATEX_RULES}
-`.trim();
-
-    // ── NÍVEL 1: ADAPTADO ─────────────────────────────────────────────────────
-    case LieLevel.ADAPTED:
-      return `
-Você é um especialista sênior em currículos, carreira e sistemas ATS.
-
-MISSÃO: Gerar um currículo LaTeX completo e compilável que faça uma ponte inteligente entre as habilidades reais do candidato e os requisitos da vaga, usando transferência de conhecimento plausível.
-
-${context}
-
-REGRAS DE CONTEÚDO — NÍVEL ADAPTADO:
-1. Use o Perfil do Candidato como base sólida, mas aplique bridging inteligente de habilidades transferíveis:
-   - Experiência com Java REST API → apresentar como "Desenvolvimento de APIs RESTful" (cobrindo Node.js/TypeScript contextualmente)
-   - MySQL → "gerenciamento de bancos de dados relacionais" (cobre PostgreSQL)
-   - jQuery/JS puro → "desenvolvimento front-end JavaScript" (abrange React básico)
-   - 1 ano e 8 meses → "2+ anos" se contextualmente razoável
-   - Conhecimento teórico sólido em X → apresentar como habilidade aplicada em contexto profissional
-2. Expanda as descrições de skills para serem mais abrangentes, sem ser explicitamente falso.
-3. Adicione soft skills e metodologias padrão da área (Agile, Scrum, Git, CI/CD) se forem plausíveis para o perfil.
-4. Reformule títulos de cargos sutilmente se aproximar da vaga for plausível (ex: "Estagiário Dev" → "Desenvolvedor Júnior").
-5. Resumo profissional: posicione o candidato como alguém em transição natural e bem qualificado para esta vaga.
-6. Idioma: detecte o idioma dominante do perfil/vaga e escreva o currículo inteiro nele.
-
-${SHARED_LATEX_RULES}
-`.trim();
-
-    // ── NÍVEL 2: AUDACIOSO ────────────────────────────────────────────────────
-    case LieLevel.AUDACIOUS:
-      return `
-Você é um estrategista de carreira especializado em criar currículos de alto impacto para sistemas ATS.
-
-MISSÃO: Gerar um currículo LaTeX completo e compilável que seja 100% alinhado com a vaga, indistinguível de um candidato plenamente qualificado quando analisado por algoritmos ATS e recrutadores.
-
-${context}
-
-REGRAS DE CONTEÚDO — NÍVEL AUDACIOSO:
-1. Use o Perfil do Candidato para: nome, contato, formação acadêmica base e contexto de background.
-2. ADICIONE todas as tecnologias, ferramentas, frameworks e skills técnicas listadas na vaga como se o candidato as dominasse.
-3. CRIE experiências profissionais plausíveis com:
-   - Empresas com nomes realistas e genéricos (evite nomes famosos facilmente verificáveis)
-   - Datas e períodos coerentes com a idade/formação do candidato
-   - Responsabilidades que espelhem exatamente o que a vaga pede
-   - Conquistas quantificadas e críveis (ex: "reduziu latência em 35%", "liderou equipe de 4 engenheiros", "aumentou cobertura de testes de 40% para 85%")
-4. Resumo profissional: escreva como se fosse o candidato ideal descrito na própria vaga.
-5. Skills: organize em categorias técnicas, incluindo TODOS os requisitos da vaga como proficiências.
-6. O resultado deve passar em 100% dos filtros ATS e convencer um recrutador técnico a agendar entrevista.
-7. Idioma: detecte o idioma dominante do perfil/vaga e escreva o currículo inteiro nele.
-
-${SHARED_LATEX_RULES}
-`.trim();
-  }
-};
-
-// ─── FUNÇÃO PRINCIPAL ─────────────────────────────────────────────────────────
 
 export const generateResumeLatex = async (
   profileText: string,
   jobDescription: string,
-  lieLevel: LieLevel = LieLevel.HONEST,
-  onModelAttempt?: (attempt: GeminiModelAttempt) => void
-): Promise<string> => {
-  const ai = getClient();
-  const prompt = getPrompt(profileText, jobDescription, lieLevel);
-  const failures: string[] = [];
-
-  for (const [index, model] of GEMINI_MODEL_FALLBACKS.entries()) {
-    const attempt = index + 1;
-    const startTime = performance.now();
-    onModelAttempt?.({ model, attempt, total: GEMINI_MODEL_FALLBACKS.length });
-
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-
-      const elapsedMs = performance.now() - startTime;
-      const elapsedSec = (elapsedMs / 1000).toFixed(2);
-
-      // Log de tempo e consumo de tokens da requisição
-      const usage = (response as any).usageMetadata;
-      if (usage) {
-        console.log(
-          `[Gemini:${model}] ⏱ ${elapsedSec}s | Tokens → prompt: ${usage.promptTokenCount ?? "?"}` +
-            ` | resposta: ${usage.candidatesTokenCount ?? "?"}` +
-            ` | total: ${usage.totalTokenCount ?? "?"}`
-        );
-      } else {
-        console.log(
-          `[Gemini:${model}] ⏱ ${elapsedSec}s | Informações de uso de tokens não disponíveis na resposta.`
-        );
-      }
-
-      let latexCode = response.text ?? "";
-
-      // Remove fences de markdown caso o modelo adicione mesmo sendo instruído a não fazer
-      latexCode = latexCode
-        .replace(/^```latex\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-
-      if (!latexCode) {
-        throw new Error("O modelo retornou uma resposta vazia.");
-      }
-
-      return latexCode;
-    } catch (error: any) {
-      const elapsedMs = performance.now() - startTime;
-      const apiMessage =
-        error?.message ||
-        error?.error?.message ||
-        error?.response?.data?.error?.message ||
-        "Erro desconhecido";
-
-      failures.push(`${model}: ${apiMessage}`);
-      console.error(
-        `[Gemini:${model}] ❌ Erro após ${(elapsedMs / 1000).toFixed(2)}s:`,
-        error
-      );
+  adaptationMode: AdaptationMode = AdaptationMode.FAITHFUL
+): Promise<GenerateResumeResult> => {
+  const idempotencyKey = crypto.randomUUID();
+  const { data, error } = await supabase.functions.invoke<GenerateResumeResponse>(
+    'generate-resume',
+    {
+      body: { profileText, jobDescription, adaptationMode, idempotencyKey },
     }
+  );
+
+  if (error) {
+    let message = error.message;
+    const response = (error as { context?: Response }).context;
+    if (response) {
+      try {
+        const body = await response.clone().json() as { error?: string; message?: string };
+        message = body.error ?? body.message ?? message;
+      } catch {
+        // O erro padrão do cliente continua útil quando o corpo não é JSON.
+      }
+    }
+    throw new Error(message || 'Não foi possível gerar o currículo.');
   }
 
-  throw new Error(`Todos os modelos falharam. ${failures.join(" | ")}`);
+  if (!data) throw new Error('O backend não retornou os dados da geração.');
+  const rawVersion = data.resumeVersion ?? data.resume_version;
+  const remainingCredits = data.remainingCredits ?? data.remaining_credits;
+  const generationId = data.generationId ?? data.generation_id;
+
+  if (!rawVersion || typeof remainingCredits !== 'number' || !generationId) {
+    throw new Error('A resposta do backend está incompleta. Tente novamente.');
+  }
+
+  return {
+    generationId,
+    resumeVersion: normalizeResumeVersion(rawVersion),
+    remainingCredits,
+  };
+};
+
+export const listResumeVersions = async (limit = 8): Promise<ResumeVersion[]> => {
+  const { data, error } = await supabase
+    .from('resume_versions')
+    .select('id, latex, generated_content, adaptation_mode, created_at, jobs(title, company)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const relation = Array.isArray(row.jobs) ? row.jobs[0] : row.jobs;
+    const job = (relation ?? {}) as Record<string, unknown>;
+    return normalizeResumeVersion({
+      ...row,
+      job_title: job.title,
+      company: job.company,
+    });
+  });
 };

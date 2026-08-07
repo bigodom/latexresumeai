@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Sparkles,
   FileText,
@@ -8,29 +8,45 @@ import {
   LogOut,
   User as UserIcon,
   Zap,
+  History,
 } from 'lucide-react';
 import { InputArea } from './components/InputArea';
 import { LatexPreview } from './components/LatexPreview';
 import { Button } from './components/Button';
-import { LieLevelSelector } from './components/LieLevelSelector';
+import { AdaptationModeSelector } from './components/LieLevelSelector';
 import {
   generateResumeLatex,
-  GeminiModelAttempt,
+  listResumeVersions,
 } from './services/geminiService';
-import { GenerationStatus, LieLevel } from './types';
+import { AdaptationMode, GenerationStatus, ResumeVersion } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
 
 const ResumeBuilder: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [profileText, setProfileText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [lieLevel, setLieLevel] = useState<LieLevel>(LieLevel.HONEST);
+  const [adaptationMode, setAdaptationMode] = useState<AdaptationMode>(AdaptationMode.FAITHFUL);
   const [generatedLatex, setGeneratedLatex] = useState('');
+  const [selectedVersion, setSelectedVersion] = useState<ResumeVersion | null>(null);
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [modelAttempt, setModelAttempt] = useState<GeminiModelAttempt | null>(null);
+  const [history, setHistory] = useState<ResumeVersion[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const loadHistory = async () => {
+    try {
+      setHistory(await listResumeVersions());
+      setHistoryError(null);
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : 'Não foi possível carregar o histórico.');
+    }
+  };
+
+  useEffect(() => {
+    void loadHistory();
+  }, []);
 
   const isGenerating =
     status === GenerationStatus.GENERATING || status === GenerationStatus.READING_PDF;
@@ -44,20 +60,22 @@ const ResumeBuilder: React.FC = () => {
     setStatus(GenerationStatus.GENERATING);
     setErrorMsg(null);
     setGeneratedLatex('');
-    setModelAttempt(null);
+    setSelectedVersion(null);
 
     try {
-      const latex = await generateResumeLatex(
+      const result = await generateResumeLatex(
         profileText,
         jobDescription,
-        lieLevel,
-        setModelAttempt
+        adaptationMode
       );
-      setGeneratedLatex(latex);
+      setGeneratedLatex(result.resumeVersion.latex);
+      setSelectedVersion(result.resumeVersion);
+      await refreshUser(result.remainingCredits);
+      await loadHistory();
       setStatus(GenerationStatus.SUCCESS);
     } catch (err: any) {
       // Mostra a mensagem de erro real retornada pela API/serviço, em vez de um texto genérico
-      setErrorMsg(err?.message || 'Ocorreu um erro ao gerar o currículo. Verifique sua chave de API ou tente novamente.');
+      setErrorMsg(err?.message || 'Ocorreu um erro ao gerar o currículo. Tente novamente.');
       setStatus(GenerationStatus.ERROR);
     }
   };
@@ -148,7 +166,7 @@ const ResumeBuilder: React.FC = () => {
           </h2>
           <p className="text-slate-400 text-lg">
             Insira seu perfil, cole a descrição da vaga, escolha o nível de adaptação
-            e receba o código LaTeX otimizado para passar pelos algoritmos ATS.
+            e receba um currículo em LaTeX organizado para leitura por pessoas e sistemas ATS.
           </p>
         </div>
 
@@ -165,7 +183,6 @@ const ResumeBuilder: React.FC = () => {
               onChange={setProfileText}
               allowFileUpload
               onFileProcessingStart={() => {
-                setModelAttempt(null);
                 setStatus(GenerationStatus.READING_PDF);
               }}
               onFileProcessingEnd={() => setStatus(GenerationStatus.IDLE)}
@@ -180,9 +197,9 @@ const ResumeBuilder: React.FC = () => {
             />
 
             {/* 3. Nível de adaptação */}
-            <LieLevelSelector
-              value={lieLevel}
-              onChange={setLieLevel}
+            <AdaptationModeSelector
+              value={adaptationMode}
+              onChange={setAdaptationMode}
               disabled={isGenerating}
             />
 
@@ -195,9 +212,15 @@ const ResumeBuilder: React.FC = () => {
                 </div>
               )}
 
+              {(user?.credits ?? 0) <= 0 && (
+                <div className="w-full p-3 bg-amber-900/20 border border-amber-500/40 rounded-lg text-amber-200 text-sm">
+                  Você ainda não tem créditos. Durante a alpha, eles são concedidos pela equipe aos convidados.
+                </div>
+              )}
+
               <Button
                 onClick={handleGenerate}
-                disabled={!profileText || !jobDescription}
+                disabled={!profileText || !jobDescription || (user?.credits ?? 0) <= 0}
                 isLoading={isGenerating}
                 className="w-full md:w-auto text-lg px-8 py-3"
                 icon={<Wand2 size={20} />}
@@ -237,26 +260,70 @@ const ResumeBuilder: React.FC = () => {
                       ? 'Extraindo texto do seu PDF...'
                       : 'Analisando requisitos e escrevendo LaTeX...'}
                   </p>
-                  {status === GenerationStatus.GENERATING && modelAttempt && (
-                    <div className="pt-2" aria-live="polite">
-                      <p className="text-xs uppercase tracking-wider text-slate-500">
-                        Modelo em uso
-                      </p>
-                      <p className="mt-1 font-mono text-sm text-indigo-300">
-                        {modelAttempt.model}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Tentativa {modelAttempt.attempt} de {modelAttempt.total}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
             {/* Resultado */}
             {generatedLatex && !isGenerating && (
-              <LatexPreview code={generatedLatex} />
+              <>
+                {selectedVersion?.generatedContent &&
+                  Array.isArray((selectedVersion.generatedContent as { gaps?: unknown }).gaps) &&
+                  ((selectedVersion.generatedContent as { gaps: unknown[] }).gaps.length > 0) && (
+                    <aside className="mb-5 rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">
+                      <h3 className="font-semibold text-amber-200">Lacunas identificadas</h3>
+                      <p className="mt-1 text-xs text-amber-100/70">
+                        Estes requisitos não foram adicionados ao currículo porque não há evidência no perfil.
+                      </p>
+                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-100/90">
+                        {(selectedVersion.generatedContent as { gaps: unknown[] }).gaps
+                          .filter((gap): gap is string => typeof gap === 'string')
+                          .map((gap) => <li key={gap}>{gap}</li>)}
+                      </ul>
+                    </aside>
+                  )}
+                <LatexPreview code={generatedLatex} />
+              </>
+            )}
+
+            {!isGenerating && history.length > 0 && (
+              <section className="mt-8 border-t border-slate-800 pt-6" aria-labelledby="history-title">
+                <div className="mb-3 flex items-center gap-2 text-slate-300">
+                  <History size={17} />
+                  <h3 id="history-title" className="text-sm font-semibold uppercase tracking-wider">
+                    Versões recentes
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  {history.map((version) => (
+                    <button
+                      key={version.id}
+                      type="button"
+                      onClick={() => {
+                        setGeneratedLatex(version.latex);
+                        setSelectedVersion(version);
+                        setStatus(GenerationStatus.SUCCESS);
+                      }}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-colors hover:border-indigo-500/50 hover:bg-slate-900"
+                    >
+                      <span className="block text-sm font-medium text-slate-200">
+                        {version.jobTitle || 'Currículo adaptado'}
+                        {version.company ? ` · ${version.company}` : ''}
+                      </span>
+                      <span className="mt-1 block text-xs text-slate-500">
+                        {new Intl.DateTimeFormat('pt-BR', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        }).format(new Date(version.createdAt))}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {historyError && !isGenerating && (
+              <p className="mt-4 text-xs text-amber-400">Histórico indisponível: {historyError}</p>
             )}
           </div>
         </div>

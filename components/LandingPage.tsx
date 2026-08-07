@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Sparkles, CheckCircle, Zap, Shield, ChevronRight, Star } from 'lucide-react';
+import { FileText, Sparkles, CheckCircle } from 'lucide-react';
 import { Button } from './Button';
 
 interface LandingPageProps {
@@ -37,7 +37,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-900/10 px-3 py-1 text-sm font-medium text-indigo-300 mb-8 animate-fadeIn">
             <span className="flex h-2 w-2 rounded-full bg-indigo-500 mr-2"></span>
-            A revolução na criação de currículos
+            Alpha fechada para convidados
           </div>
           
           <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-8 leading-tight animate-slideInUp">
@@ -48,12 +48,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </h1>
           
           <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-400 mb-10 animate-slideInUp delay-100">
-            Transforme seu perfil e a descrição da vaga em um código LaTeX profissional, compilável e otimizado para passar nos filtros de recrutamento.
+            Adapte seu currículo à linguagem de uma vaga usando somente informações reais e receba um código LaTeX pronto para revisar.
           </p>
 
           <div className="flex justify-center gap-4 animate-slideInUp delay-200">
             <Button onClick={onGetStarted} className="px-8 py-4 text-lg rounded-xl shadow-indigo-500/25">
-              Criar Currículo Grátis
+              Entrar ou criar conta
             </Button>
           </div>
         </div>
@@ -67,7 +67,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-white mb-4">Como funciona</h2>
-            <p className="text-slate-400">Três passos simples para o currículo perfeito</p>
+            <p className="text-slate-400">Três passos para criar uma versão direcionada à vaga</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -75,17 +75,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               {
                 icon: <FileText className="h-8 w-8 text-emerald-400" />,
                 title: "Importe seus Dados",
-                desc: "Cole seu texto ou faça upload do seu PDF atual. Nossa IA extrai tudo automaticamente."
+                desc: "Cole o texto ou importe um PDF com texto selecionável e confira os dados antes de gerar."
               },
               {
                 icon: <Sparkles className="h-8 w-8 text-indigo-400" />,
                 title: "Personalização Inteligente",
-                desc: "A IA adapta suas experiências para as palavras-chave exatas da descrição da vaga."
+                desc: "Escolha entre edição fiel, ênfase estratégica ou análise de lacunas. Nenhum modo inventa fatos."
               },
               {
                 icon: <CheckCircle className="h-8 w-8 text-cyan-400" />,
                 title: "Código LaTeX Pronto",
-                desc: "Receba o código pronto para copiar e colar no Overleaf. Design profissional garantido."
+                desc: "Revise o código gerado, faça download do arquivo .tex ou abra-o no Overleaf."
               }
             ].map((feature, idx) => (
               <div key={idx} className="bg-slate-800/40 p-8 rounded-2xl border border-slate-700/50 hover:border-indigo-500/30 transition-all hover:bg-slate-800/60 group">
@@ -100,111 +100,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Alpha Section */}
       <section className="py-24 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Escolha seu pacote de créditos</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">
-              Invista na sua carreira com preços acessíveis. Cada crédito equivale a uma geração completa de currículo otimizado.
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-b from-indigo-900/20 to-slate-900 p-8 md:p-12">
+            <h2 className="text-3xl font-bold text-white mb-4">Participe da versão alpha</h2>
+            <p className="text-slate-400 mb-8">
+              O acesso é gratuito para convidados e usa créditos concedidos pela equipe. Pagamentos ainda não estão disponíveis.
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            
-            {/* Tier 1: Starter */}
-            <div className="relative bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col hover:border-slate-600 transition-colors">
-              <div className="mb-4">
-                <span className="text-slate-400 font-medium uppercase tracking-wider text-xs">Iniciante</span>
-              </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-white">R$ 4,99</span>
-                <span className="text-slate-500 ml-2">/ único</span>
-              </div>
-              <div className="mb-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm inline-flex items-center w-max">
-                 <Star size={12} className="mr-1 fill-current" /> Promocional
-              </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  <span className="font-bold text-white mr-1">5</span> Créditos de Geração
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  Acesso a modelos padrão
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  Suporte básico
-                </li>
-              </ul>
-              <Button onClick={onGetStarted} variant="outline" className="w-full">
-                Comprar 5 Créditos
-              </Button>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-slate-300 mb-8">
+              <span className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-400" />Cadastro e histórico reais</span>
+              <span className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-400" />Consumo protegido no servidor</span>
+              <span className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-400" />Sem cobrança durante a alpha</span>
             </div>
-
-            {/* Tier 2: Standard (Highlighted) */}
-            <div className="relative bg-gradient-to-b from-indigo-900/20 to-slate-900 border border-indigo-500/50 rounded-2xl p-8 flex flex-col transform md:-translate-y-4 shadow-2xl shadow-indigo-900/20">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                Mais Popular
-              </div>
-              <div className="mb-4">
-                <span className="text-indigo-400 font-medium uppercase tracking-wider text-xs">Padrão</span>
-              </div>
-              <div className="mb-6">
-                <span className="text-5xl font-bold text-white">R$ 9,99</span>
-                <span className="text-slate-500 ml-2">/ único</span>
-              </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-400 mr-3" />
-                  <span className="font-bold text-white mr-1">10</span> Créditos de Geração
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-400 mr-3" />
-                  Prioridade na fila de IA
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-400 mr-3" />
-                  Modelos Premium
-                </li>
-              </ul>
-              <Button onClick={onGetStarted} variant="primary" className="w-full py-3 text-lg">
-                Comprar 10 Créditos
-              </Button>
-            </div>
-
-            {/* Tier 3: Pro */}
-            <div className="relative bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col hover:border-slate-600 transition-colors">
-              <div className="mb-4">
-                <span className="text-slate-400 font-medium uppercase tracking-wider text-xs">Profissional</span>
-              </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-white">R$ 15,99</span>
-                <span className="text-slate-500 ml-2">/ único</span>
-              </div>
-               <div className="mb-6 text-transparent px-3 py-1 text-sm inline-flex items-center">
-                 &nbsp;
-              </div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  <span className="font-bold text-white mr-1">20</span> Créditos de Geração
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  Histórico ilimitado
-                </li>
-                <li className="flex items-center text-slate-300">
-                  <CheckCircle size={18} className="text-indigo-500 mr-3" />
-                  Suporte prioritário
-                </li>
-              </ul>
-              <Button onClick={onGetStarted} variant="outline" className="w-full">
-                Comprar 20 Créditos
-              </Button>
-            </div>
-
+            <Button onClick={onGetStarted} variant="primary" className="px-8 py-3">
+              Acessar alpha
+            </Button>
           </div>
         </div>
       </section>
@@ -219,7 +130,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <span className="text-lg font-bold text-slate-300">LatexResume<span className="text-indigo-500">AI</span></span>
           </div>
           <div className="text-slate-500 text-sm">
-            &copy; 2024 LatexResumeAI. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} LatexResumeAI. Alpha em desenvolvimento.
           </div>
         </div>
       </footer>

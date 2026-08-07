@@ -1,20 +1,75 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# LatexResumeAI
 
-# Run and deploy your AI Studio app
+Alpha de uma plataforma que adapta currículos a vagas usando somente informações
+confirmadas pelo candidato. A aplicação importa texto de PDF, envia perfil e vaga a
+uma Edge Function protegida, usa Gemini para gerar conteúdo estruturado e renderiza
+um currículo LaTeX consistente.
 
-This contains everything you need to run your app locally.
+## Funcionalidades da alpha
 
-View your app in AI Studio: https://ai.studio/apps/drive/1DSbwotYw2HAimnuJNkaWycB_S7I-IAuD
+- cadastro, confirmação de e-mail, login, sessão e logout pelo Supabase Auth;
+- perfil e saldo persistentes;
+- importação client-side de PDFs de até 5 MB e 10 páginas;
+- modos Fiel, Estratégico e Análise de Lacunas, sem fabricação intencional de fatos;
+- consumo atômico de créditos com idempotência e estorno em falhas;
+- Gemini chamado somente pelo backend;
+- histórico das versões geradas;
+- cópia, download `.tex` e envio opcional ao Overleaf com confirmação.
 
-## Run Locally
+Pagamentos ainda não existem. Novos usuários começam com zero créditos e a equipe
+concede saldo manualmente aos convidados.
 
-**Prerequisites:**  Node.js
+## Stack
 
+- React 19, TypeScript e Vite;
+- Supabase Auth, Postgres, RLS e Edge Functions;
+- Gemini API;
+- PDF.js no navegador;
+- build estático com Vite, publicável em qualquer hospedagem de SPA.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Executar o frontend
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Preencha no `.env.local`:
+
+```dotenv
+VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SUBSTITUA
+```
+
+Não coloque `GEMINI_API_KEY` ou uma chave administrativa do Supabase em variáveis
+`VITE_*`: tudo com esse prefixo é público no bundle.
+
+## Backend
+
+As instruções de ambiente local, deploy, secrets e concessão de créditos estão em
+[supabase/README.md](supabase/README.md). A migration inicial está em
+`supabase/migrations/` e a função de geração em `supabase/functions/`.
+
+## Verificações
+
+```bash
+npm run typecheck
+npm run build
+npm run check
+npm audit --omit=dev
+```
+
+Ainda faltam testes automatizados de RLS, concorrência de créditos, componentes e
+fluxo E2E. Não use dados pessoais reais como fixtures.
+
+## Segurança e privacidade
+
+- O currículo e a vaga são dados pessoais e não devem aparecer em logs.
+- A publishable key pode estar no cliente porque as tabelas têm RLS; a secret key
+  nunca pode sair do backend.
+- O usuário precisa revisar todo conteúdo gerado por IA.
+- Abrir no Overleaf envia o currículo a um terceiro e, por isso, exige confirmação.
+- A alpha não promete score ATS, entrevista ou contratação.
+
+Antes de contribuir, leia [AGENTS.md](AGENTS.md).

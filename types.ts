@@ -17,8 +17,18 @@ export interface PdfExtractResult {
   pageCount: number;
 }
 
-export enum LieLevel {
-  HONEST = 0,
-  ADAPTED = 1,
-  AUDACIOUS = 2,
+export enum AdaptationMode {
+  FAITHFUL = 'faithful',
+  STRATEGIC = 'strategic',
+  GAP_ANALYSIS = 'gap_analysis',
+}
+
+export interface ResumeVersion {
+  id: string;
+  latex: string;
+  generatedContent?: unknown;
+  createdAt: string;
+  jobTitle?: string | null;
+  company?: string | null;
+  adaptationMode?: AdaptationMode;
 }
