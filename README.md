@@ -2,7 +2,7 @@
 
 Alpha de uma plataforma que adapta currículos a vagas usando somente informações
 confirmadas pelo candidato. A aplicação importa texto de PDF, envia perfil e vaga a
-uma Edge Function protegida, usa Gemini para gerar conteúdo estruturado e renderiza
+uma Edge Function protegida, usa o provedor de IA configurado para gerar conteúdo e renderiza
 um currículo LaTeX consistente.
 
 ## Funcionalidades da alpha
@@ -12,7 +12,8 @@ um currículo LaTeX consistente.
 - importação client-side de PDFs de até 5 MB e 10 páginas;
 - modos Fiel, Estratégico e Análise de Lacunas, sem fabricação intencional de fatos;
 - consumo atômico de créditos com idempotência e estorno em falhas;
-- Gemini chamado somente pelo backend;
+- DeepSeek, Gemini ou OpenAI chamados somente pelo backend, conforme configuração ativa;
+- prompts e parâmetros versionados, com painel administrativo somente local;
 - histórico das versões geradas;
 - cópia, download `.tex` e envio opcional ao Overleaf com confirmação.
 
@@ -23,7 +24,7 @@ concede saldo manualmente aos convidados.
 
 - React 19, TypeScript e Vite;
 - Supabase Auth, Postgres, RLS e Edge Functions;
-- Gemini API;
+- adapters para DeepSeek V4 Flash, Gemini 3.6 Flash e GPT-5.6 Luna;
 - PDF.js no navegador;
 - build estático com Vite, publicável em qualquer hospedagem de SPA.
 
@@ -42,7 +43,7 @@ VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SUBSTITUA
 ```
 
-Não coloque `GEMINI_API_KEY` ou uma chave administrativa do Supabase em variáveis
+Não coloque `DEEPSEEK_API_KEY` ou uma chave administrativa do Supabase em variáveis
 `VITE_*`: tudo com esse prefixo é público no bundle.
 
 ## Backend
@@ -50,6 +51,8 @@ Não coloque `GEMINI_API_KEY` ou uma chave administrativa do Supabase em variáv
 As instruções de ambiente local, deploy, secrets e concessão de créditos estão em
 [supabase/README.md](supabase/README.md). A migration inicial está em
 `supabase/migrations/` e a função de geração em `supabase/functions/`.
+A configuração de provedores, prompts e painel local está em
+[docs/AI_CONFIGURATION.md](docs/AI_CONFIGURATION.md).
 
 ## Verificações
 

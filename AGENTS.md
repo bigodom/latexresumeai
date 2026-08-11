@@ -1,7 +1,7 @@
 # Contexto do projeto — LatexResumeAI
 
 Leia este arquivo antes de trabalhar no repositório. Ele descreve o estado real da
-alpha em 5 de agosto de 2026. Não apresente roadmap como funcionalidade pronta.
+alpha em 10 de agosto de 2026. Não apresente roadmap como funcionalidade pronta.
 
 ## Produto
 
@@ -19,16 +19,16 @@ foram implementados.
 - Créditos concedidos administrativamente e registrados em ledger.
 - Extração de texto de PDF no navegador, limitada a 5 MB e 10 páginas, sem OCR.
 - Três modos factualmente seguros: `faithful`, `strategic` e `gap_analysis`.
-- Gemini chamado por uma Supabase Edge Function; nenhuma chave Gemini no bundle.
+- DeepSeek, Gemini ou OpenAI chamados por adapters na Edge Function; nenhuma chave de IA no bundle.
 - Reserva atômica/idempotente, limite de cinco tentativas diárias e estorno em erro.
-- Saída Gemini em JSON estruturado, validada e renderizada em LaTeX por código.
+- Saída do provedor em JSON estruturado, validada e renderizada em LaTeX por código.
 - Histórico persistente de versões e snapshots.
 - Download/cópia do `.tex`; Overleaf somente após confirmação de envio a terceiro.
 - Landing de alpha por convite, sem preços ou garantias comerciais.
 
-Não existem pagamentos, assinatura, painel administrativo, OCR, compilação LaTeX,
+Não existem pagamentos, assinatura, painel administrativo público, OCR, compilação LaTeX,
 PDF final, recuperação/exclusão de conta pela UI, comparação visual de alterações,
-fila assíncrona ou testes E2E.
+fila assíncrona, A/B automático ou testes E2E. Existe um painel local para IA/prompts.
 
 ## Regras de conteúdo
 
@@ -57,18 +57,18 @@ React/Vite
 Supabase Edge Function
   ├─ valida JWT, origem, payload e limites
   ├─ RPC reserve_generation debita crédito
-  ├─ Gemini retorna JSON com schema
+  ├─ adapter ativo retorna JSON validado pelo backend
   ├─ código escapa conteúdo e renderiza LaTeX
   ├─ RPC complete_generation persiste versão/tokens
   └─ RPC refund_generation estorna uma falha
           │
           ▼
-Postgres: profiles, jobs, generation_requests,
-          resume_versions e credit_ledger
+Postgres: profiles, jobs, generation_requests, resume_versions, credit_ledger,
+          ai_configurations e ai_prompt_versions
 ```
 
-O cliente usa apenas URL e publishable key. `GEMINI_API_KEY` e a secret/service-role
-key existem somente na Edge Function. As tabelas são default-deny para escrita do
+O cliente usa apenas URL e publishable key. Chaves de IA e a secret/service-role
+key existem somente nas Edge Functions. As tabelas são default-deny para escrita do
 cliente; RLS permite ao usuário ler apenas suas próprias linhas.
 
 ## Estrutura relevante
@@ -77,14 +77,18 @@ cliente; RLS permite ao usuário ler apenas suas próprias linhas.
 App.tsx                                  fluxo principal e histórico
 context/AuthContext.tsx                  sessão/perfil Supabase
 services/supabaseClient.ts               cliente público
-services/geminiService.ts                contrato com a Edge Function
+services/resumeService.ts                contrato com a Edge Function
 services/pdfService.ts                   leitura e limites do PDF
 components/AuthPage.tsx                  login/cadastro
 components/LieLevelSelector.tsx          AdaptationModeSelector (nome legado do arquivo)
 components/LatexPreview.tsx              cópia, download e Overleaf
 supabase/config.toml                     ambiente Supabase local
-supabase/migrations/*_alpha_backend.sql  schema, RLS e RPCs
-supabase/functions/generate-resume/      orquestração Gemini/LaTeX
+supabase/migrations/                     schema, RLS, configuração de IA e RPCs
+supabase/functions/generate-resume/      orquestração multi-provider/LaTeX
+supabase/functions/admin-ai-config/      API do painel administrativo local
+supabase/functions/_shared/ai/           adapters, schema, prompt base e renderização
+components/admin/LocalAdminPage.tsx      painel disponível apenas no Vite dev
+docs/AI_CONFIGURATION.md                 configuração de IA e prompts
 supabase/README.md                        setup, deploy e créditos
 .env.example                             configuração pública do frontend
 ```
@@ -153,7 +157,10 @@ npx supabase functions serve generate-resume --env-file supabase/functions/.env.
 
 Consulte `supabase/README.md` antes de deploy ou concessão de créditos. Variáveis
 frontend: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Secrets backend:
-`GEMINI_API_KEY`, opcional `GEMINI_MODEL`, e `ALLOWED_ORIGINS`.
+`DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `ALLOWED_ORIGINS`.
+Somente a chave do provedor ativo é obrigatória.
+`LOCAL_ADMIN_ENABLED=true` existe somente em `supabase/functions/.env.local`; não
+deve ser configurado nem usado como autorização no ambiente remoto.
 
 ## Segurança e privacidade obrigatórias
 
@@ -169,8 +176,8 @@ frontend: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Secrets backend
 - Não envie nada ao Overleaf automaticamente.
 - Exclusão/exportação, política de retenção e consentimento LGPD são pendências antes
   de abrir a alpha além de amigos próximos.
-- No tier gratuito da Gemini o tratamento de dados é diferente; para currículos
-  reais, prefira billing habilitado e registre essa decisão na política de privacidade.
+- Revise os termos de tratamento de dados de cada provedor antes de processar
+  currículos reais e registre o provedor e a transferência na política de privacidade.
 
 ## Limitações técnicas conhecidas
 
@@ -193,7 +200,7 @@ frontend: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Secrets backend
 3. Testar prompt injection e caracteres especiais com fixtures sintéticas.
 4. Configurar SMTP, redirect URLs, domínio permitido e secrets do ambiente real.
 5. Criar política de privacidade/consentimento e processo de exclusão de conta.
-6. Habilitar billing/alertas Gemini e observar custo/tokens por geração.
+6. Configurar saldo/alertas dos provedores e observar custo/tokens por geração.
 
 ### P1 de produto
 

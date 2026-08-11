@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 declare global {
   interface ImportMetaEnv {
+    readonly DEV: boolean;
     readonly VITE_SUPABASE_URL?: string;
     readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   }

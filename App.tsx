@@ -17,7 +17,7 @@ import { AdaptationModeSelector } from './components/LieLevelSelector';
 import {
   generateResumeLatex,
   listResumeVersions,
-} from './services/geminiService';
+} from './services/resumeService';
 import { AdaptationMode, GenerationStatus, ResumeVersion } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthPage } from './components/AuthPage';
