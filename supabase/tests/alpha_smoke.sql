@@ -10,6 +10,14 @@ values
 
 set local role service_role;
 set local "request.jwt.claims" = '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}';
+do $$
+begin
+  if to_regclass('public.ai_configurations') is not null
+     or to_regclass('public.ai_prompt_versions') is not null then
+    raise exception 'legacy AI administration tables still exist';
+  end if;
+end $$;
+
 select public.grant_credits('11111111-1111-4111-8111-111111111111', 2, 'smoke_test');
 
 set local role authenticated;
@@ -38,14 +46,8 @@ begin
   if (select count(*) from public.credit_ledger where user_id = auth.uid() and amount = -1) <> 1 then
     raise exception 'ledger debit failed';
   end if;
-  if (select ai_provider from public.generation_requests where user_id = auth.uid()) <> 'deepseek'
-     or (select prompt_version from public.generation_requests where user_id = auth.uid()) <> 'resume-alpha-v1'
-     or (select ai_configuration_id from public.generation_requests where user_id = auth.uid()) is null then
-    raise exception 'AI configuration snapshot failed';
-  end if;
-  if has_table_privilege('authenticated', 'public.ai_configurations', 'select')
-     or has_table_privilege('authenticated', 'public.ai_prompt_versions', 'select') then
-    raise exception 'AI admin tables leaked to authenticated role';
+  if (select prompt_version from public.generation_requests where user_id = auth.uid()) <> 'resume-v1' then
+    raise exception 'prompt version default failed';
   end if;
 end $$;
 
@@ -61,18 +63,6 @@ end $$;
 
 set local role service_role;
 set local "request.jwt.claims" = '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}';
-do $$
-declare v_gemini uuid; v_deepseek uuid;
-begin
-  select id into v_gemini from public.ai_configurations where provider = 'gemini';
-  select id into v_deepseek from public.ai_configurations where provider = 'deepseek';
-  perform public.activate_ai_configuration(v_gemini);
-  if (select count(*) from public.ai_configurations where is_active) <> 1
-     or not (select is_active from public.ai_configurations where id = v_gemini) then
-    raise exception 'atomic AI configuration activation failed';
-  end if;
-  perform public.activate_ai_configuration(v_deepseek);
-end $$;
 select * from public.complete_generation(
   (select id from public.generation_requests where user_id = '11111111-1111-4111-8111-111111111111'),
   '11111111-1111-4111-8111-111111111111',

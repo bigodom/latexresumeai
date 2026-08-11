@@ -13,13 +13,9 @@ export type AIParameters = {
 };
 
 export type AIConfiguration = {
-  id: string;
-  name: string;
   provider: AIProviderName;
   model: string;
   parameters: AIParameters;
-  promptVersion: string;
-  promptText: string;
 };
 
 export type ResumeContent = {

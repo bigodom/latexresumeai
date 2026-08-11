@@ -28,6 +28,3 @@ enable_confirmations = false
 
 [functions.generate-resume]
 verify_jwt = true
-
-[functions.admin-ai-config]
-verify_jwt = true

@@ -30,7 +30,7 @@ Crie `supabase/functions/.env.local` (ignorado pelo Git) com:
 
 ```dotenv
 DEEPSEEK_API_KEY=SUBSTITUA
-LOCAL_ADMIN_ENABLED=true
+AI_PROVIDER=deepseek
 ALLOWED_ORIGINS=http://localhost:3000
 # Adicione GEMINI_API_KEY e OPENAI_API_KEY somente quando for testar esses provedores.
 ```
@@ -48,6 +48,7 @@ do shell, crie `supabase/functions/.env.production` (ignorado pelo Git) com:
 
 ```dotenv
 DEEPSEEK_API_KEY=SUBSTITUA
+AI_PROVIDER=deepseek
 ALLOWED_ORIGINS=https://recurriculo.gpysolucoes.com.br
 # Adicione GEMINI_API_KEY e OPENAI_API_KEY somente quando for ativá-los.
 ```
@@ -62,9 +63,7 @@ npx supabase functions deploy generate-resume
 ```
 
 As chaves dos provedores inativos são opcionais. Consulte
-`docs/AI_CONFIGURATION.md` para usar o painel local em `http://localhost:3000/admin`.
-Não adicione `LOCAL_ADMIN_ENABLED` aos secrets remotos nem inclua `admin-ai-config`
-no fluxo normal de deploy.
+`docs/AI_PROVIDERS.md` para trocar o provider ou editar o prompt centralizado.
 
 Cadastre no painel de Auth a URL pública do site e os redirect URLs permitidos.
 Para mais de poucos cadastros por hora, configure SMTP próprio: o provedor de e-mail
@@ -101,7 +100,7 @@ A função adiciona o saldo e registra a concessão em `credit_ledger`. Não alt
 
 ## Limitações conhecidas da alpha
 
-- O painel local administra IA e prompts, mas não convites ou créditos.
+- Não há painel administrativo; provider e prompt são configurados no backend.
 - Qualquer provedor pode produzir uma reformulação incorreta; o usuário deve revisar o
   resultado. O produto não garante aprovação por ATS ou entrevista.
 - Gerações `reserved` interrompidas depois de o processo server-side morrer podem

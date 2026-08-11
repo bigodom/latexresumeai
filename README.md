@@ -12,8 +12,8 @@ um currículo LaTeX consistente.
 - importação client-side de PDFs de até 5 MB e 10 páginas;
 - modos Fiel, Estratégico e Análise de Lacunas, sem fabricação intencional de fatos;
 - consumo atômico de créditos com idempotência e estorno em falhas;
-- DeepSeek, Gemini ou OpenAI chamados somente pelo backend, conforme configuração ativa;
-- prompts e parâmetros versionados, com painel administrativo somente local;
+- DeepSeek, Gemini ou OpenAI chamados somente pelo backend, conforme `AI_PROVIDER`;
+- prompt centralizado e versionado em um único arquivo;
 - histórico das versões geradas;
 - cópia, download `.tex` e envio opcional ao Overleaf com confirmação.
 
@@ -51,8 +51,8 @@ Não coloque `DEEPSEEK_API_KEY` ou uma chave administrativa do Supabase em vari�
 As instruções de ambiente local, deploy, secrets e concessão de créditos estão em
 [supabase/README.md](supabase/README.md). A migration inicial está em
 `supabase/migrations/` e a função de geração em `supabase/functions/`.
-A configuração de provedores, prompts e painel local está em
-[docs/AI_CONFIGURATION.md](docs/AI_CONFIGURATION.md).
+A configuração de provedores e do prompt está em
+[docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
 
 ## Verificações
 

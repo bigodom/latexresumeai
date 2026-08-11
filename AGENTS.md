@@ -1,7 +1,7 @@
 # Contexto do projeto — LatexResumeAI
 
 Leia este arquivo antes de trabalhar no repositório. Ele descreve o estado real da
-alpha em 10 de agosto de 2026. Não apresente roadmap como funcionalidade pronta.
+alpha em 11 de agosto de 2026. Não apresente roadmap como funcionalidade pronta.
 
 ## Produto
 
@@ -20,15 +20,17 @@ foram implementados.
 - Extração de texto de PDF no navegador, limitada a 5 MB e 10 páginas, sem OCR.
 - Três modos factualmente seguros: `faithful`, `strategic` e `gap_analysis`.
 - DeepSeek, Gemini ou OpenAI chamados por adapters na Edge Function; nenhuma chave de IA no bundle.
+- Provedor selecionado por `AI_PROVIDER`; prompt inteiro centralizado em `_shared/ai/prompt.ts`.
 - Reserva atômica/idempotente, limite de cinco tentativas diárias e estorno em erro.
 - Saída do provedor em JSON estruturado, validada e renderizada em LaTeX por código.
 - Histórico persistente de versões e snapshots.
+- Histórico apresentado em cards responsivos, com estados de carregamento, vazio e erro.
 - Download/cópia do `.tex`; Overleaf somente após confirmação de envio a terceiro.
 - Landing de alpha por convite, sem preços ou garantias comerciais.
 
-Não existem pagamentos, assinatura, painel administrativo público, OCR, compilação LaTeX,
+Não existem pagamentos, assinatura, painel administrativo, OCR, compilação LaTeX,
 PDF final, recuperação/exclusão de conta pela UI, comparação visual de alterações,
-fila assíncrona, A/B automático ou testes E2E. Existe um painel local para IA/prompts.
+fila assíncrona, A/B automático ou testes E2E.
 
 ## Regras de conteúdo
 
@@ -63,8 +65,7 @@ Supabase Edge Function
   └─ RPC refund_generation estorna uma falha
           │
           ▼
-Postgres: profiles, jobs, generation_requests, resume_versions, credit_ledger,
-          ai_configurations e ai_prompt_versions
+Postgres: profiles, jobs, generation_requests, resume_versions e credit_ledger
 ```
 
 O cliente usa apenas URL e publishable key. Chaves de IA e a secret/service-role
@@ -81,14 +82,14 @@ services/resumeService.ts                contrato com a Edge Function
 services/pdfService.ts                   leitura e limites do PDF
 components/AuthPage.tsx                  login/cadastro
 components/LieLevelSelector.tsx          AdaptationModeSelector (nome legado do arquivo)
-components/LatexPreview.tsx              cópia, download e Overleaf
+components/LatexPreview.tsx              preview, cópia, download e Overleaf
+components/ResumeHistory.tsx             cards e estados do histórico de versões
 supabase/config.toml                     ambiente Supabase local
 supabase/migrations/                     schema, RLS, configuração de IA e RPCs
 supabase/functions/generate-resume/      orquestração multi-provider/LaTeX
-supabase/functions/admin-ai-config/      API do painel administrativo local
 supabase/functions/_shared/ai/           adapters, schema, prompt base e renderização
-components/admin/LocalAdminPage.tsx      painel disponível apenas no Vite dev
-docs/AI_CONFIGURATION.md                 configuração de IA e prompts
+supabase/functions/_shared/ai/prompt.ts  fonte única do prompt e sua versão
+docs/AI_PROVIDERS.md                     configuração de IA e prompt
 supabase/README.md                        setup, deploy e créditos
 .env.example                             configuração pública do frontend
 ```
@@ -157,10 +158,8 @@ npx supabase functions serve generate-resume --env-file supabase/functions/.env.
 
 Consulte `supabase/README.md` antes de deploy ou concessão de créditos. Variáveis
 frontend: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Secrets backend:
-`DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `ALLOWED_ORIGINS`.
+`AI_PROVIDER`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `ALLOWED_ORIGINS`.
 Somente a chave do provedor ativo é obrigatória.
-`LOCAL_ADMIN_ENABLED=true` existe somente em `supabase/functions/.env.local`; não
-deve ser configurado nem usado como autorização no ambiente remoto.
 
 ## Segurança e privacidade obrigatórias
 

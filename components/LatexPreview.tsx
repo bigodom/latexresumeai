@@ -64,20 +64,20 @@ export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
   if (!code) return null;
 
   return (
-    <div className="flex flex-col h-full animate-fadeIn">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 className="text-xl font-bold text-white flex items-center">
+    <div className="flex h-full flex-col animate-fadeIn">
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <h2 className="flex items-center text-xl font-bold text-white">
           <span className="bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent">
             LaTeX Gerado
           </span>
         </h2>
-        <div className="flex space-x-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button
             variant="primary"
             onClick={() => openInOverleaf(code)}
             icon={<ExternalLink size={16} />}
             title="Abrir este código direto em um novo projeto no Overleaf"
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 focus:ring-emerald-500"
+            className="col-span-2 bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700 focus:ring-emerald-500 sm:col-span-1"
           >
             Abrir no Overleaf
           </Button>
@@ -85,14 +85,14 @@ export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
             Baixar
           </Button>
           <Button variant={copied ? "primary" : "secondary"} onClick={handleCopy} icon={copied ? <Check size={16} /> : <Copy size={16} />}>
-            {copied ? "Copiado!" : "Copiar Código"}
+            {copied ? "Copiado!" : "Copiar"}
           </Button>
         </div>
       </div>
 
       <div className="relative group flex-grow">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-600 rounded-xl opacity-20 group-hover:opacity-30 transition duration-500 blur"></div>
-        <div className="relative w-full h-[600px] bg-slate-900 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
+        <div className="relative flex h-[430px] w-full flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-900 sm:h-[560px]">
           <div className="flex items-center px-4 py-2 bg-slate-800 border-b border-slate-700">
             <div className="flex space-x-2">
               <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
@@ -101,7 +101,7 @@ export const LatexPreview: React.FC<LatexPreviewProps> = ({ code }) => {
             </div>
             <span className="ml-4 text-xs text-slate-500 font-mono">resume.tex</span>
           </div>
-          <pre className="flex-grow p-4 overflow-auto text-sm font-mono text-emerald-100/90 custom-scrollbar">
+          <pre className="custom-scrollbar flex-grow overflow-auto p-4 font-mono text-xs text-emerald-100/90 sm:text-sm">
             <code>{code}</code>
           </pre>
         </div>

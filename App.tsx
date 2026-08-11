@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles,
   FileText,
@@ -8,7 +8,7 @@ import {
   LogOut,
   User as UserIcon,
   Zap,
-  History,
+  CheckCircle2,
 } from 'lucide-react';
 import { InputArea } from './components/InputArea';
 import { LatexPreview } from './components/LatexPreview';
@@ -22,6 +22,7 @@ import { AdaptationMode, GenerationStatus, ResumeVersion } from './types';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
+import { ResumeHistory } from './components/ResumeHistory';
 
 const ResumeBuilder: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -34,19 +35,24 @@ const ResumeBuilder: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [history, setHistory] = useState<ResumeVersion[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const resultRef = useRef<HTMLDivElement>(null);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
+    setIsHistoryLoading(true);
     try {
       setHistory(await listResumeVersions());
       setHistoryError(null);
     } catch (error) {
       setHistoryError(error instanceof Error ? error.message : 'Não foi possível carregar o histórico.');
+    } finally {
+      setIsHistoryLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadHistory();
-  }, []);
+  }, [loadHistory]);
 
   const isGenerating =
     status === GenerationStatus.GENERATING || status === GenerationStatus.READING_PDF;
@@ -73,11 +79,24 @@ const ResumeBuilder: React.FC = () => {
       await refreshUser(result.remainingCredits);
       await loadHistory();
       setStatus(GenerationStatus.SUCCESS);
+      window.requestAnimationFrame(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     } catch (err: any) {
       // Mostra a mensagem de erro real retornada pela API/serviço, em vez de um texto genérico
       setErrorMsg(err?.message || 'Ocorreu um erro ao gerar o currículo. Tente novamente.');
       setStatus(GenerationStatus.ERROR);
     }
+  };
+
+  const handleSelectVersion = (version: ResumeVersion) => {
+    setGeneratedLatex(version.latex);
+    setSelectedVersion(version);
+    setErrorMsg(null);
+    setStatus(GenerationStatus.SUCCESS);
+    window.requestAnimationFrame(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   // Label do botão de gerar baseado no status
@@ -145,9 +164,11 @@ const ResumeBuilder: React.FC = () => {
               </div>
 
               <button
+                type="button"
                 onClick={logout}
                 className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors"
                 title="Sair"
+                aria-label="Sair da conta"
               >
                 <LogOut size={18} />
               </button>
@@ -157,23 +178,40 @@ const ResumeBuilder: React.FC = () => {
       </header>
 
       {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
 
         {/* Intro */}
-        <div className="mb-10 text-center max-w-2xl mx-auto animate-fadeIn">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Adapte seu currículo em <span className="text-indigo-400">segundos</span>.
+        <div className="mb-8 max-w-3xl animate-fadeIn sm:mb-10">
+          <div className="mb-3 flex items-center gap-2 text-indigo-300">
+            <Sparkles size={16} aria-hidden="true" />
+            <span className="text-xs font-bold uppercase tracking-[0.2em]">Nova candidatura</span>
+          </div>
+          <h2 className="text-3xl font-bold leading-tight text-white md:text-4xl">
+            Um currículo mais relevante para <span className="text-indigo-400">cada vaga</span>.
           </h2>
-          <p className="text-slate-400 text-lg">
-            Insira seu perfil, cole a descrição da vaga, escolha o nível de adaptação
-            e receba um currículo em LaTeX organizado para leitura por pessoas e sistemas ATS.
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
+            Informe somente fatos do seu perfil e os requisitos da oportunidade. Você revisa o
+            resultado antes de copiar, baixar ou enviar ao Overleaf.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-8">
 
           {/* ── Coluna esquerda: Inputs ──────────────────────────────────────── */}
-          <div className="space-y-8 animate-slideInLeft">
+          <section
+            className="animate-slideInLeft space-y-7 rounded-3xl border border-slate-800/80 bg-slate-900/35 p-5 shadow-2xl shadow-black/10 sm:p-7"
+            aria-labelledby="generator-title"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-5">
+              <div>
+                <h3 id="generator-title" className="text-xl font-bold text-white">Criar nova versão</h3>
+                <p className="mt-1 text-sm text-slate-400">Complete as três etapas para consumir 1 crédito.</p>
+              </div>
+              <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-xs font-semibold text-yellow-200 sm:hidden">
+                <Zap size={13} aria-hidden="true" />
+                {user?.credits ?? 0}
+              </span>
+            </div>
 
             {/* 1. Perfil */}
             <InputArea
@@ -204,10 +242,10 @@ const ResumeBuilder: React.FC = () => {
             />
 
             {/* Ação */}
-            <div className="pt-2 flex flex-col items-center space-y-4">
+            <div className="flex flex-col items-center space-y-4 pt-1">
               {errorMsg && (
                 <div className="w-full p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
-                  <p className="font-semibold text-red-300 mb-0.5">Erro ao gerar o currículo</p>
+                  <p className="mb-0.5 font-semibold text-red-300">Erro ao gerar o currículo</p>
                   <p className="text-red-200/90 break-words">{errorMsg}</p>
                 </div>
               )}
@@ -222,31 +260,60 @@ const ResumeBuilder: React.FC = () => {
                 onClick={handleGenerate}
                 disabled={!profileText || !jobDescription || (user?.credits ?? 0) <= 0}
                 isLoading={isGenerating}
-                className="w-full md:w-auto text-lg px-8 py-3"
+                className="w-full px-8 py-3 text-base sm:text-lg"
                 icon={<Wand2 size={20} />}
               >
                 {generateLabel()}
               </Button>
+              <p className="text-center text-xs leading-relaxed text-slate-500">
+                A IA pode cometer erros. Revise datas, empresas, tecnologias e demais fatos antes de usar.
+              </p>
             </div>
-          </div>
+          </section>
 
           {/* ── Coluna direita: Output ───────────────────────────────────────── */}
-          <div className="lg:pl-8 lg:border-l border-slate-800 animate-slideInRight min-h-[500px]">
+          <div
+            ref={resultRef}
+            className="animate-slideInRight min-h-[520px] scroll-mt-24 rounded-3xl border border-slate-800/80 bg-slate-900/35 p-5 shadow-2xl shadow-black/10 sm:p-7"
+          >
 
             {/* Estado inicial */}
             {status === GenerationStatus.IDLE && !generatedLatex && (
-              <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4 border-2 border-dashed border-slate-800 rounded-xl p-10">
-                <Sparkles size={48} className="text-slate-700" />
-                <p className="text-center font-medium">Pronto para gerar mágica.</p>
-                <p className="text-sm text-center max-w-xs">
-                  Seu código LaTeX personalizado aparecerá aqui, pronto para ser copiado para o Overleaf.
+              <div className="flex min-h-[470px] flex-col items-center justify-center space-y-4 rounded-2xl border border-dashed border-slate-700 bg-slate-950/25 p-8 text-center text-slate-500">
+                <div className="rounded-2xl border border-indigo-400/15 bg-indigo-400/5 p-4 text-indigo-300/70">
+                  <FileText size={34} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-300">Seu resultado aparecerá aqui</p>
+                  <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed">
+                    Depois da geração, revise o conteúdo e escolha se deseja copiar o código,
+                    baixar o arquivo ou abrir no Overleaf.
+                  </p>
+                </div>
+                {history.length > 0 && (
+                  <p className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-400">
+                    Você também pode abrir uma versão na biblioteca abaixo.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {status === GenerationStatus.ERROR && !generatedLatex && (
+              <div className="flex min-h-[470px] flex-col items-center justify-center rounded-2xl border border-red-500/20 bg-red-950/10 p-8 text-center">
+                <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-red-300">
+                  <Briefcase size={30} aria-hidden="true" />
+                </div>
+                <h3 className="mt-4 font-semibold text-slate-200">A geração não foi concluída</h3>
+                <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
+                  Confira a mensagem ao lado e tente novamente. Se um crédito foi reservado, o backend
+                  realiza o estorno em caso de falha.
                 </p>
               </div>
             )}
 
             {/* Gerando */}
             {isGenerating && (
-              <div className="h-full flex flex-col items-center justify-center space-y-6">
+              <div className="flex min-h-[470px] flex-col items-center justify-center space-y-6" role="status" aria-live="polite">
                 <div className="relative">
                   <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -260,6 +327,7 @@ const ResumeBuilder: React.FC = () => {
                       ? 'Extraindo texto do seu PDF...'
                       : 'Analisando requisitos e escrevendo LaTeX...'}
                   </p>
+                  <p className="text-xs text-slate-600">Mantenha esta página aberta até a conclusão.</p>
                 </div>
               </div>
             )}
@@ -267,6 +335,20 @@ const ResumeBuilder: React.FC = () => {
             {/* Resultado */}
             {generatedLatex && !isGenerating && (
               <>
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
+                    <CheckCircle2 size={17} aria-hidden="true" />
+                    Versão pronta para revisão
+                  </span>
+                  {selectedVersion?.createdAt && (
+                    <span className="text-xs text-slate-500">
+                      {new Intl.DateTimeFormat('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      }).format(new Date(selectedVersion.createdAt))}
+                    </span>
+                  )}
+                </div>
                 {selectedVersion?.generatedContent &&
                   Array.isArray((selectedVersion.generatedContent as { gaps?: unknown }).gaps) &&
                   ((selectedVersion.generatedContent as { gaps: unknown[] }).gaps.length > 0) && (
@@ -285,47 +367,18 @@ const ResumeBuilder: React.FC = () => {
                 <LatexPreview code={generatedLatex} />
               </>
             )}
-
-            {!isGenerating && history.length > 0 && (
-              <section className="mt-8 border-t border-slate-800 pt-6" aria-labelledby="history-title">
-                <div className="mb-3 flex items-center gap-2 text-slate-300">
-                  <History size={17} />
-                  <h3 id="history-title" className="text-sm font-semibold uppercase tracking-wider">
-                    Versões recentes
-                  </h3>
-                </div>
-                <div className="space-y-2">
-                  {history.map((version) => (
-                    <button
-                      key={version.id}
-                      type="button"
-                      onClick={() => {
-                        setGeneratedLatex(version.latex);
-                        setSelectedVersion(version);
-                        setStatus(GenerationStatus.SUCCESS);
-                      }}
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-colors hover:border-indigo-500/50 hover:bg-slate-900"
-                    >
-                      <span className="block text-sm font-medium text-slate-200">
-                        {version.jobTitle || 'Currículo adaptado'}
-                        {version.company ? ` · ${version.company}` : ''}
-                      </span>
-                      <span className="mt-1 block text-xs text-slate-500">
-                        {new Intl.DateTimeFormat('pt-BR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        }).format(new Date(version.createdAt))}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {historyError && !isGenerating && (
-              <p className="mt-4 text-xs text-amber-400">Histórico indisponível: {historyError}</p>
-            )}
           </div>
+        </div>
+
+        <div className="mt-8">
+          <ResumeHistory
+            versions={history}
+            selectedVersionId={selectedVersion?.id}
+            isLoading={isHistoryLoading}
+            error={historyError}
+            onSelect={handleSelectVersion}
+            onRetry={() => void loadHistory()}
+          />
         </div>
       </main>
     </div>

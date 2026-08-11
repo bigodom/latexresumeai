@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { normalizeConfiguration, secretNameFor } from '../_shared/ai/configuration.ts';
-import { buildSystemPrompt, buildUserData } from '../_shared/ai/prompt.ts';
+import { configurationFor, secretNameFor } from '../_shared/ai/configuration.ts';
+import { buildSystemPrompt, buildUserData, PROMPT_VERSION } from '../_shared/ai/prompt.ts';
 import { adapterFor } from '../_shared/ai/providers/index.ts';
 import { renderLatex, validateContent } from '../_shared/ai/resume.ts';
 
@@ -56,6 +56,19 @@ Deno.serve(async (request) => {
   const { data: authData, error: authError } = await userClient.auth.getUser();
   if (authError || !authData.user) return json({ error: 'Sessão inválida ou expirada.' }, 401, origin);
 
+  let configuration;
+  try {
+    configuration = configurationFor(Deno.env.get('AI_PROVIDER'));
+  } catch {
+    console.error('generate-resume: invalid AI_PROVIDER');
+    return json({ error: 'Provedor de IA inválido.' }, 503, origin);
+  }
+  const apiKey = Deno.env.get(secretNameFor(configuration.provider));
+  if (!apiKey) {
+    console.error('generate-resume: active provider secret missing', { provider: configuration.provider });
+    return json({ error: 'Serviço de IA temporariamente indisponível.' }, 503, origin);
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -100,23 +113,15 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const { data: generation, error: generationError } = await admin
+    const { data: snapshot, error: snapshotError } = await admin
       .from('generation_requests')
-      .select('ai_configuration_id')
+      .update({ model: configuration.model, prompt_version: PROMPT_VERSION })
       .eq('id', generationId)
       .eq('user_id', authData.user.id)
+      .eq('status', 'reserved')
+      .select('id')
       .single();
-    if (generationError || !generation?.ai_configuration_id) throw new Error('configuration_snapshot_missing');
-
-    const { data: configurationRow, error: configurationError } = await admin
-      .from('ai_configurations')
-      .select('id,name,provider,model,parameters,ai_prompt_versions(version,prompt_text)')
-      .eq('id', generation.ai_configuration_id)
-      .single();
-    if (configurationError || !configurationRow) throw new Error('configuration_not_found');
-    const configuration = normalizeConfiguration(configurationRow as Record<string, any>);
-    const apiKey = Deno.env.get(secretNameFor(configuration.provider));
-    if (!apiKey) throw new Error(`provider_secret_missing_${configuration.provider}`);
+    if (snapshotError || !snapshot) throw new Error('generation_metadata_failed');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -125,7 +130,7 @@ Deno.serve(async (request) => {
       providerResult = await adapterFor(configuration.provider)({
         apiKey,
         configuration,
-        systemPrompt: buildSystemPrompt(adaptationMode, configuration.promptText),
+        systemPrompt: buildSystemPrompt(adaptationMode),
         userData: buildUserData(profileText, jobDescription),
         userId: authData.user.id,
         signal: controller.signal,

@@ -89,8 +89,10 @@ export const AdaptationModeSelector: React.FC<AdaptationModeSelectorProps> = ({
           return (
             <button
               key={cfg.level}
+              type="button"
               onClick={() => !disabled && onChange(cfg.level)}
               disabled={disabled}
+              aria-pressed={isSelected}
               className={`
                 relative flex flex-col text-left p-4 rounded-xl border-2 transition-all duration-200 group
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
