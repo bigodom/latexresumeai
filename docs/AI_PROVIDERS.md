@@ -40,6 +40,10 @@ instruções editoriais estão juntas nesse arquivo. A validação do JSON e o e
 de LaTeX permanecem em código separado e não devem ser removidos ao experimentar
 novos prompts.
 
+A fundamentação e as decisões do prompt atual estão documentadas em
+[`ATS_PROMPT.md`](ATS_PROMPT.md). O objetivo é melhorar extração e relevância
+legítima; não existe garantia de aprovação ou de uma pontuação universal de ATS.
+
 Os parâmetros específicos de cada modelo ficam em
 `supabase/functions/_shared/ai/configuration.ts`. Eles não são enviados pelo
 navegador.

@@ -23,6 +23,8 @@ foram implementados.
 - Três modos factualmente seguros: `faithful`, `strategic` e `gap_analysis`.
 - DeepSeek, Gemini ou OpenAI chamados por adapters na Edge Function; nenhuma chave de IA no bundle.
 - Provedor selecionado por `AI_PROVIDER`; prompt inteiro centralizado em `_shared/ai/prompt.ts`.
+- Prompt orientado a parsing e matching de ATS, com termos da vaga usados somente
+  quando sustentados pelo currículo; não há garantia de aprovação.
 - Reserva atômica/idempotente, limite de cinco tentativas diárias e estorno em erro.
 - Saída do provedor em JSON estruturado, validada e renderizada em LaTeX por código.
 - Histórico persistente de versões e snapshots.
@@ -94,6 +96,7 @@ supabase/migrations/                     schema, RLS, configuração de IA e RPC
 supabase/functions/generate-resume/      orquestração multi-provider/LaTeX
 supabase/functions/_shared/ai/           adapters, schema, prompt base e renderização
 supabase/functions/_shared/ai/prompt.ts  fonte única do prompt e sua versão
+docs/ATS_PROMPT.md                      pesquisa e decisões de compatibilidade com ATS
 docs/AI_PROVIDERS.md                     configuração de IA e prompt
 supabase/README.md                        setup, deploy e créditos
 .env.example                             configuração pública do frontend
@@ -170,6 +173,10 @@ Somente a chave do provedor ativo é obrigatória.
 
 ## Segurança e privacidade obrigatórias
 
+- O deploy público deve redirecionar HTTP para HTTPS na borda do Cloudflare e
+  entregar HSTS; consulte `docs/CLOUDFLARE_DEPLOY.md`.
+- Não implemente criptografia caseira de senha no frontend. Credenciais devem ser
+  enviadas somente por HTTPS ao Supabase Auth e nunca registradas em logs.
 - Currículo e vaga são entrada não confiável e contêm PII.
 - Nunca logue perfil, vaga, prompt completo, resposta, e-mail ou telefone.
 - Nunca use uma variável `VITE_*` para secrets.

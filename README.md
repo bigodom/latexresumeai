@@ -69,6 +69,10 @@ fluxo E2E. Não use dados pessoais reais como fixtures.
 
 ## Segurança e privacidade
 
+- O deploy de produção exige HTTPS na borda; veja
+  [docs/CLOUDFLARE_DEPLOY.md](docs/CLOUDFLARE_DEPLOY.md).
+- Novos cadastros exigem no frontend ao menos oito caracteres, uma letra maiúscula
+  e um número. O Supabase continua responsável por autenticar e armazenar o hash.
 - O currículo e a vaga são dados pessoais e não devem aparecer em logs.
 - O PDF é lido no navegador; o backend armazena somente o texto que o usuário revisa e salva.
 - A publishable key pode estar no cliente porque as tabelas têm RLS; a secret key

@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowRight, User, Mail, Lock, ArrowLeft } from 'lucide-react';
+import {
+  FileText,
+  ArrowRight,
+  User,
+  Mail,
+  Lock,
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 import { Button } from './Button';
 
 interface AuthPageProps {
   onBack: () => void;
 }
+
+const PASSWORD_MIN_LENGTH = 8;
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const { login, register } = useAuth();
@@ -18,20 +29,51 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordTouched, setPasswordTouched] = useState(false);
+
+  const passwordRequirements = [
+    {
+      label: `Pelo menos ${PASSWORD_MIN_LENGTH} caracteres`,
+      met: password.length >= PASSWORD_MIN_LENGTH,
+    },
+    {
+      label: 'Pelo menos uma letra maiúscula',
+      met: /\p{Lu}/u.test(password),
+    },
+    {
+      label: 'Pelo menos um número',
+      met: /\p{N}/u.test(password),
+    },
+  ];
+  const isRegistrationPasswordValid = passwordRequirements.every(({ met }) => met);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!window.isSecureContext) {
+      setError('Por segurança, login e cadastro estão disponíveis somente por HTTPS.');
+      return;
+    }
+
+    if (!isLogin && !isRegistrationPasswordValid) {
+      setPasswordTouched(true);
+      setError('A senha ainda não atende a todos os requisitos.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isLogin) {
-        await login(email, password);
+        await login(email.trim(), password);
       } else {
-        const result = await register(name, email, password);
+        const result = await register(name.trim(), email.trim(), password);
         if (result.requiresEmailConfirmation) {
           setNotice('Conta criada. Confira seu e-mail para confirmar o cadastro antes de entrar.');
           setIsLogin(true);
+          setPassword('');
+          setPasswordTouched(false);
         }
       }
     } catch (err) {
@@ -46,6 +88,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       
       {/* Back Button */}
       <button 
+        type="button"
         onClick={onBack}
         className="absolute top-6 left-6 text-slate-400 hover:text-white flex items-center transition-colors"
       >
@@ -80,13 +123,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             )}
             {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
+                <label htmlFor="auth-name" className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User size={18} className="text-slate-500" />
                   </div>
                   <input
+                    id="auth-name"
                     type="text"
+                    autoComplete="name"
                     required={!isLogin}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -98,13 +143,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+              <label htmlFor="auth-email" className="block text-sm font-medium text-slate-300 mb-1">Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail size={18} className="text-slate-500" />
                 </div>
                 <input
+                  id="auth-email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -115,22 +162,55 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
+              <label htmlFor="auth-password" className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock size={18} className="text-slate-500" />
                 </div>
                 <input
+                  id="auth-password"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={isLogin ? undefined : PASSWORD_MIN_LENGTH}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => {
+                    if (!isLogin) setPasswordTouched(true);
+                  }}
+                  aria-describedby={!isLogin ? 'password-requirements' : undefined}
+                  aria-invalid={!isLogin && passwordTouched && !isRegistrationPasswordValid}
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-200 placeholder-slate-500 sm:text-sm transition-all"
                   placeholder="••••••••"
                 />
               </div>
-              {!isLogin && <p className="mt-1 text-xs text-slate-500">Use pelo menos 6 caracteres.</p>}
+              {!isLogin && !passwordTouched && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Ao terminar, mostraremos se a senha atende aos requisitos.
+                </p>
+              )}
+              {!isLogin && passwordTouched && (
+                <ul
+                  id="password-requirements"
+                  className="mt-2 space-y-1"
+                  aria-label="Requisitos da senha"
+                  aria-live="polite"
+                >
+                  {passwordRequirements.map(({ label, met }) => (
+                    <li
+                      key={label}
+                      className={`flex items-center gap-1.5 text-xs ${met ? 'text-emerald-400' : 'text-red-400'}`}
+                    >
+                      {met ? (
+                        <CheckCircle2 size={14} aria-hidden="true" />
+                      ) : (
+                        <XCircle size={14} aria-hidden="true" />
+                      )}
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {error && (
@@ -154,10 +234,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             <p className="text-sm text-slate-400">
               {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{' '}
               <button
+                type="button"
                 onClick={() => {
                     setIsLogin(!isLogin);
                     setError(null);
                     setNotice(null);
+                    setPassword('');
+                    setPasswordTouched(false);
                 }}
                 className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none focus:underline"
               >
