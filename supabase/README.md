@@ -86,6 +86,13 @@ curl -X POST 'https://SEU_PROJETO.supabase.co/rest/v1/rpc/grant_credits' \
 A função adiciona o saldo e registra a concessão em `credit_ledger`. Não altere
 `profiles.credits` isoladamente, pois isso quebraria a auditoria.
 
+## Currículo base
+
+O texto revisado do currículo é armazenado em `profiles.base_resume_text`. O cliente
+não possui permissão direta de `UPDATE` em `profiles`; ele chama a RPC autenticada
+`save_base_resume`, que deriva o usuário de `auth.uid()` e limita o conteúdo a 50.000
+caracteres. O PDF original não é enviado nem armazenado.
+
 ## Garantias implementadas
 
 - RLS default-deny: usuários autenticados somente leem suas próprias linhas.

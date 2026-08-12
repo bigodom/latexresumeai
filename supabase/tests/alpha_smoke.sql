@@ -23,10 +23,18 @@ select public.grant_credits('11111111-1111-4111-8111-111111111111', 2, 'smoke_te
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}';
 
+select * from public.save_base_resume('Synthetic base resume');
+
 do $$
 begin
   if (select credits from public.profiles where id = auth.uid()) <> 2 then
     raise exception 'grant or own-profile RLS failed';
+  end if;
+  if (select base_resume_text from public.profiles where id = auth.uid()) <> 'Synthetic base resume' then
+    raise exception 'base resume persistence failed';
+  end if;
+  if has_table_privilege('authenticated', 'public.profiles', 'update') then
+    raise exception 'authenticated role can update profiles directly';
   end if;
 end $$;
 
@@ -58,6 +66,13 @@ begin
   if exists (select 1 from public.profiles where id = '11111111-1111-4111-8111-111111111111')
      or exists (select 1 from public.generation_requests where user_id = '11111111-1111-4111-8111-111111111111') then
     raise exception 'cross-user RLS failed';
+  end if;
+  if exists (
+    select 1 from public.profiles
+    where id = '11111111-1111-4111-8111-111111111111'
+      and base_resume_text = 'Synthetic base resume'
+  ) then
+    raise exception 'cross-user base resume read failed';
   end if;
 end $$;
 

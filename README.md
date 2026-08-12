@@ -8,6 +8,7 @@ um currículo LaTeX consistente.
 ## Funcionalidades da alpha
 
 - cadastro, confirmação de e-mail, login, sessão e logout pelo Supabase Auth;
+- currículo base editável e persistente, carregado automaticamente no gerador;
 - perfil e saldo persistentes;
 - importação client-side de PDFs de até 5 MB e 10 páginas;
 - modos Fiel, Estratégico e Análise de Lacunas, sem fabricação intencional de fatos;
@@ -69,6 +70,7 @@ fluxo E2E. Não use dados pessoais reais como fixtures.
 ## Segurança e privacidade
 
 - O currículo e a vaga são dados pessoais e não devem aparecer em logs.
+- O PDF é lido no navegador; o backend armazena somente o texto que o usuário revisa e salva.
 - A publishable key pode estar no cliente porque as tabelas têm RLS; a secret key
   nunca pode sair do backend.
 - O usuário precisa revisar todo conteúdo gerado por IA.

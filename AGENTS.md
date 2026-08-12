@@ -6,7 +6,8 @@ alpha em 11 de agosto de 2026. Não apresente roadmap como funcionalidade pronta
 ## Produto
 
 O LatexResumeAI adapta o currículo de uma pessoa a uma vaga sem inventar
-qualificações. O usuário cria uma conta, importa ou cola o currículo, cola a vaga,
+qualificações. Após entrar, o usuário importa, revisa e salva um currículo base. Ao
+abrir o gerador, esse texto é carregado automaticamente; então ele cola a vaga,
 escolhe um modo, consome um crédito e recebe LaTeX para revisar, baixar ou abrir no
 Overleaf. A visão futura é uma plataforma por assinatura para acompanhar perfil,
 candidaturas, entrevistas e desenvolvimento profissional; pagamentos ainda não
@@ -16,6 +17,7 @@ foram implementados.
 
 - Supabase Auth real: cadastro por e-mail/senha, confirmação, sessão e logout.
 - Perfil com saldo persistente; novas contas começam com zero créditos.
+- Currículo base textual editável e persistente, salvo por RPC autenticada.
 - Créditos concedidos administrativamente e registrados em ledger.
 - Extração de texto de PDF no navegador, limitada a 5 MB e 10 páginas, sem OCR.
 - Três modos factualmente seguros: `faithful`, `strategic` e `gap_analysis`.
@@ -52,6 +54,7 @@ ainda pode errar; não descreva as proteções como garantia de fidelidade.
 React/Vite
   ├─ Supabase Auth
   ├─ leitura RLS de profiles e resume_versions
+  ├─ RPC save_base_resume persiste apenas o currículo do usuário autenticado
   ├─ PDF.js extrai texto localmente
   └─ invoke generate-resume com JWT + idempotencyKey
           │
@@ -75,12 +78,14 @@ cliente; RLS permite ao usuário ler apenas suas próprias linhas.
 ## Estrutura relevante
 
 ```text
-App.tsx                                  fluxo principal e histórico
+App.tsx                                  navegação currículo base → gerador e histórico
 context/AuthContext.tsx                  sessão/perfil Supabase
 services/supabaseClient.ts               cliente público
+services/baseResumeService.ts            leitura e persistência do currículo base
 services/resumeService.ts                contrato com a Edge Function
 services/pdfService.ts                   leitura e limites do PDF
 components/AuthPage.tsx                  login/cadastro
+components/BaseResumePage.tsx            importação, edição e salvamento do currículo base
 components/LieLevelSelector.tsx          AdaptationModeSelector (nome legado do arquivo)
 components/LatexPreview.tsx              preview, cópia, download e Overleaf
 components/ResumeHistory.tsx             cards e estados do histórico de versões
@@ -128,6 +133,8 @@ Não quebre esse contrato sem atualizar frontend, função, documentação e tes
 ## Banco e créditos
 
 - `profiles.id` é igual a `auth.users.id`.
+- `profiles.base_resume_text` guarda até 50.000 caracteres e só é alterado pela RPC
+  `save_base_resume`, que usa `auth.uid()`; o cliente não recebe `UPDATE` na tabela.
 - `resume_versions` guarda `profile_snapshot`, conteúdo JSON, LaTeX, modelo e versão
   do prompt; versões antigas são imutáveis.
 - `(user_id, idempotency_key)` é único.
@@ -184,7 +191,7 @@ Somente a chave do provedor ativo é obrigatória.
 - A função depende das variáveis legadas automáticas `SUPABASE_ANON_KEY` e
   `SUPABASE_SERVICE_ROLE_KEY`; revisar ao migrar para publishable/secret keys novas.
 - Não há reconciliação automática de reservas presas se o runtime morrer.
-- A interface ainda não mostra `gaps` nem um diff antes/depois.
+- A interface mostra `gaps`, mas ainda não possui um diff antes/depois.
 - O nome da vaga/empresa não é coletado atualmente, então histórico pode ser genérico.
 - O backend não compila o `.tex`; compilabilidade não é garantida.
 - Não há lint, suíte automatizada ou CI. `typecheck` e `build` são as verificações
@@ -203,7 +210,7 @@ Somente a chave do provedor ativo é obrigatória.
 
 ### P1 de produto
 
-- Perfil profissional estruturado e reutilizável.
+- Evoluir o currículo base textual para um perfil profissional estruturado.
 - Revisão/diff antes de confirmar a versão.
 - Exibição das lacunas separada do currículo.
 - Formulário de empresa/cargo e pipeline de candidaturas.

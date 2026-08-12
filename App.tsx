@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Sparkles,
   FileText,
   Briefcase,
@@ -23,10 +24,17 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
 import { ResumeHistory } from './components/ResumeHistory';
+import { BaseResumePage } from './components/BaseResumePage';
+import { BaseResume, loadBaseResume } from './services/baseResumeService';
 
-const ResumeBuilder: React.FC = () => {
+interface ResumeBuilderProps {
+  baseResumeText: string;
+  onBackToBaseResume: () => void;
+}
+
+const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ baseResumeText, onBackToBaseResume }) => {
   const { user, logout, refreshUser } = useAuth();
-  const [profileText, setProfileText] = useState('');
+  const [profileText, setProfileText] = useState(baseResumeText);
   const [jobDescription, setJobDescription] = useState('');
   const [adaptationMode, setAdaptationMode] = useState<AdaptationMode>(AdaptationMode.FAITHFUL);
   const [generatedLatex, setGeneratedLatex] = useState('');
@@ -123,9 +131,17 @@ const ResumeBuilder: React.FC = () => {
           </div>
 
           {/* Progress + User */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <button
+              type="button"
+              onClick={onBackToBaseResume}
+              className="inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 sm:px-3"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span className="hidden sm:inline">Meu currículo</span>
+            </button>
             {/* Progress (oculto em mobile) */}
-            <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-400 mr-8">
+            <div className="hidden xl:flex items-center space-x-6 text-sm font-medium text-slate-400 mr-5">
               <div className="flex items-center">
                 <span className={`w-2 h-2 rounded-full mr-2 ${profileText ? 'bg-emerald-500' : 'bg-slate-700'}`} />
                 Perfil
@@ -147,7 +163,7 @@ const ResumeBuilder: React.FC = () => {
             </div>
 
             {/* User info */}
-            <div className="flex items-center space-x-3 border-l border-slate-800 pl-4">
+            <div className="flex items-center space-x-3 border-l border-slate-800 pl-3 sm:pl-4">
               {/* Créditos */}
               <div className="hidden sm:flex items-center bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 mr-2">
                 <Zap size={14} className="text-yellow-400 mr-2" />
@@ -190,8 +206,8 @@ const ResumeBuilder: React.FC = () => {
             Um currículo mais relevante para <span className="text-indigo-400">cada vaga</span>.
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg">
-            Informe somente fatos do seu perfil e os requisitos da oportunidade. Você revisa o
-            resultado antes de copiar, baixar ou enviar ao Overleaf.
+            Seu currículo base já foi carregado. Cole os requisitos da oportunidade, escolha como
+            adaptar e revise o resultado antes de usar.
           </p>
         </div>
 
@@ -215,15 +231,12 @@ const ResumeBuilder: React.FC = () => {
 
             {/* 1. Perfil */}
             <InputArea
-              label="1. Seu Perfil / Currículo Existente"
-              placeholder="Cole o texto do seu currículo atual aqui, ou liste sua educação, habilidades e experiência..."
+              label="1. Currículo base"
+              placeholder="Seu currículo salvo será carregado aqui..."
               value={profileText}
               onChange={setProfileText}
-              allowFileUpload
-              onFileProcessingStart={() => {
-                setStatus(GenerationStatus.READING_PDF);
-              }}
-              onFileProcessingEnd={() => setStatus(GenerationStatus.IDLE)}
+              maxLength={50_000}
+              helperText="Você pode ajustar o texto para esta vaga. Essas alterações não modificam o currículo base salvo."
             />
 
             {/* 2. Vaga */}
@@ -232,6 +245,7 @@ const ResumeBuilder: React.FC = () => {
               placeholder="Cole os requisitos da vaga, responsabilidades e qualificações aqui..."
               value={jobDescription}
               onChange={setJobDescription}
+              maxLength={30_000}
             />
 
             {/* 3. Nível de adaptação */}
@@ -393,6 +407,77 @@ const App: React.FC = () => (
   </AuthProvider>
 );
 
+const AuthenticatedWorkspace: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [page, setPage] = useState<'base-resume' | 'generator'>('base-resume');
+  const [baseResume, setBaseResume] = useState<BaseResume>({ text: '', updatedAt: null });
+  const [isResumeLoading, setIsResumeLoading] = useState(true);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+
+  const fetchBaseResume = useCallback(async () => {
+    setIsResumeLoading(true);
+    setResumeError(null);
+    try {
+      setBaseResume(await loadBaseResume());
+    } catch (error) {
+      setResumeError(error instanceof Error ? error.message : 'Não foi possível carregar seu currículo.');
+    } finally {
+      setIsResumeLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchBaseResume();
+  }, [fetchBaseResume, user?.id]);
+
+  if (isResumeLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200" role="status" aria-live="polite">
+        <div className="text-center">
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+          <p className="mt-4 text-sm text-slate-400">Carregando seu currículo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (resumeError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-200">
+        <div className="w-full max-w-md rounded-3xl border border-red-500/25 bg-slate-900 p-7 text-center">
+          <h1 className="text-xl font-bold text-white">Não foi possível abrir seu espaço</h1>
+          <p className="mt-2 text-sm text-slate-400">{resumeError}</p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button type="button" onClick={() => void fetchBaseResume()}>
+              Tentar novamente
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void logout()}>
+              Sair
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (page === 'generator') {
+    return (
+      <ResumeBuilder
+        baseResumeText={baseResume.text}
+        onBackToBaseResume={() => setPage('base-resume')}
+      />
+    );
+  }
+
+  return (
+    <BaseResumePage
+      resume={baseResume}
+      onSaved={setBaseResume}
+      onOpenGenerator={() => setPage('generator')}
+    />
+  );
+};
+
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
@@ -405,7 +490,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (user) return <ResumeBuilder />;
+  if (user) return <AuthenticatedWorkspace />;
   if (showAuth) return <AuthPage onBack={() => setShowAuth(false)} />;
   return <LandingPage onGetStarted={() => setShowAuth(true)} />;
 };

@@ -11,6 +11,9 @@ interface InputAreaProps {
   onFileProcessingStart?: () => void;
   onFileProcessingEnd?: () => void;
   className?: string;
+  textareaClassName?: string;
+  maxLength?: number;
+  helperText?: string;
 }
 
 export const InputArea: React.FC<InputAreaProps> = ({
@@ -21,7 +24,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
   allowFileUpload = false,
   onFileProcessingStart,
   onFileProcessingEnd,
-  className = ""
+  className = "",
+  textareaClassName = '',
+  maxLength,
+  helperText,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaId = useId();
@@ -111,13 +117,22 @@ export const InputArea: React.FC<InputAreaProps> = ({
           id={textareaId}
           aria-describedby={error ? errorId : undefined}
           aria-invalid={Boolean(error)}
-          className="relative w-full h-64 bg-slate-800/80 text-slate-200 p-4 rounded-xl border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none font-mono text-sm leading-relaxed"
+          className={`relative h-64 w-full resize-none rounded-xl border border-slate-700 bg-slate-800/80 p-4 font-mono text-sm leading-relaxed text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${textareaClassName}`}
           placeholder={placeholder}
           value={value}
+          maxLength={maxLength}
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
       {error && <p id={errorId} className="mt-1 text-xs text-red-400" role="alert">{error}</p>}
+      <div className="flex items-start justify-between gap-3 text-xs text-slate-500">
+        {helperText ? <p className="leading-relaxed">{helperText}</p> : <span />}
+        {maxLength && (
+          <span className="shrink-0 tabular-nums" aria-label={`${value.length} de ${maxLength} caracteres`}>
+            {value.length.toLocaleString('pt-BR')}/{maxLength.toLocaleString('pt-BR')}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
